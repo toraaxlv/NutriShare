@@ -1,1 +1,13 @@
-Test 123
+# PENGEMBANGAN PIRANTI LUNAK
+Repository ini merupakan repository bersama untuk project dari matakuliah __PENGEMBANGAN PIRANTI LUNAK__, __INTERAKSI MANUSIA & KOMPUTER__, dan __PEMODELAN BERORIENTASI OBJEK__
+
+<br/>
+
+## Identitas Tim
+
+**Tora Alvaro** — 01082240007  |  [tora.alvaro@gmail.com](mailto:tora.alvaro@gmail.com) <br/>
+**nama** — NIM |   [email](mailto:email) <br/>
+**nama** — NIM |   [email](mailto:email) <br/>
+**nama** — NIM |   [email](mailto:email) <br/>
+**nama** — NIM |   [email](mailto:email) <br/>
+
