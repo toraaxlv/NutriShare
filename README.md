@@ -6,7 +6,7 @@ Repository ini merupakan repository bersama untuk project dari matakuliah __PENG
 ## Identitas Tim
 
 **Tora Alvaro** — 01082240007  |  [tora.alvaro@gmail.com](mailto:tora.alvaro@gmail.com) <br/>
-**nama** — NIM |   [email](mailto:email) <br/>
+**Evan Laluan** — 01082240015  |   [Laluanevan2508@gmail.com](mailto:Laluanevan2508@gmail.com) <br/>
 **nama** — NIM |   [email](mailto:email) <br/>
 **nama** — NIM |   [email](mailto:email) <br/>
 **nama** — NIM |   [email](mailto:email) <br/>
