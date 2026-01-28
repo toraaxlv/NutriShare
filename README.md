@@ -9,5 +9,5 @@ Repository ini merupakan repository bersama untuk project dari matakuliah __PENG
 **Evan Laluan** — 01082240015  |   [Laluanevan2508@gmail.com](mailto:Laluanevan2508@gmail.com) <br/>
 **Jeremy Ivanka Nursalim** — 01082240003 |   [ivanka.jeremy18@gmail.com](mailto:ivanka.jeremy18@gmail.com) <br/>
 **Daniel Gilberth Octavianus Latupeirissa** — 01082240027 |   [email](mailto:daniellatupeirissa64@gmail.com) <br/>
-**nama** — NIM |   [email](mailto:email) <br/>
+**Josh** — 01082240033 |   [email](mailto:joshethanw@gmail.com) <br/>
 
