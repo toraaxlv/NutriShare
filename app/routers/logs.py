@@ -1,0 +1,94 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import date
+from app.database import get_db
+from app.models.food_log import FoodLog
+from app.models.food_item import FoodItem
+from app.schemas.food_log import FoodLogCreate, FoodLogResponse, DailySummary
+from app.services.auth_service import get_current_user
+from app.services.nutrition_service import calculate_targets
+import uuid
+
+router = APIRouter()
+
+@router.post("/", response_model=FoodLogResponse, status_code=201)
+def log_food(
+    payload: FoodLogCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    food = db.query(FoodItem).filter(FoodItem.id == payload.food_item_id).first()
+    if not food:
+        raise HTTPException(status_code=404, detail="Food item tidak ditemukan")
+
+    ratio = payload.quantity_g / 100
+    log = FoodLog(
+        user_id=current_user.id,
+        food_item_id=payload.food_item_id,
+        log_date=payload.log_date,
+        meal_type=payload.meal_type,
+        quantity_g=payload.quantity_g,
+        calories=round(food.calories_per_100g * ratio, 1),
+        protein_g=round(food.protein_per_100g * ratio, 1),
+        carbs_g=round(food.carbs_per_100g * ratio, 1),
+        fat_g=round(food.fat_per_100g * ratio, 1),
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return log
+
+@router.get("/")
+def get_daily_logs(
+    log_date: date,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    logs = db.query(FoodLog).filter(
+        FoodLog.user_id == current_user.id,
+        FoodLog.log_date == log_date
+    ).all()
+    return logs
+
+@router.delete("/{log_id}", status_code=204)
+def delete_log(
+    log_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    log = db.query(FoodLog).filter(
+        FoodLog.id == log_id,
+        FoodLog.user_id == current_user.id
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log tidak ditemukan")
+    db.delete(log)
+    db.commit()
+
+@router.get("/summary")
+def get_daily_summary(
+    log_date: date,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    result = db.query(
+        func.coalesce(func.sum(FoodLog.calories),  0).label("total_calories"),
+        func.coalesce(func.sum(FoodLog.protein_g), 0).label("total_protein_g"),
+        func.coalesce(func.sum(FoodLog.carbs_g),   0).label("total_carbs_g"),
+        func.coalesce(func.sum(FoodLog.fat_g),     0).label("total_fat_g"),
+    ).filter(
+        FoodLog.user_id == current_user.id,
+        FoodLog.log_date == log_date
+    ).one()
+
+    targets = calculate_targets(current_user) or {}
+
+    return {
+        "date": log_date,
+        "total_calories":  result.total_calories,
+        "total_protein_g": result.total_protein_g,
+        "total_carbs_g":   result.total_carbs_g,
+        "total_fat_g":     result.total_fat_g,
+        **{f"target_{k}": v for k, v in targets.items()}
+    }
