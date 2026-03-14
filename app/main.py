@@ -9,7 +9,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Nutrishare API",
-    description="Backend API untuk aplikasi tracking nutrisi Nutrishare",
+    description="Backend API Nutrisharee",
     version="1.0.0"
 )
 
@@ -21,10 +21,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router,    prefix="/api/v1/auth",    tags=["🔐 Auth"])
-app.include_router(profile.router, prefix="/api/v1/profile", tags=["👤 Profile"])
-app.include_router(foods.router,   prefix="/api/v1/foods",   tags=["🍎 Foods"])
-app.include_router(logs.router,    prefix="/api/v1/logs",    tags=["📋 Logs"])
+app.include_router(auth.router,    prefix="/api/v1/auth",    tags=["Auth"])
+app.include_router(profile.router, prefix="/api/v1/profile", tags=["Profile"])
+app.include_router(foods.router,   prefix="/api/v1/foods",   tags=["Foods"])
+app.include_router(logs.router,    prefix="/api/v1/logs",    tags=["Logs"])
 
 @app.get("/health", tags=["System"])
 def health_check():
