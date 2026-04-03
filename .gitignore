@@ -13,6 +13,9 @@ __pycache__/
 # macOS
 .DS_Store
 
+# Claude Code context (lokal saja)
+CLAUDE.md
+
 # Database
 *.db
 *.sqlite
