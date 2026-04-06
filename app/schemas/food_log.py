@@ -12,6 +12,7 @@ class FoodLogCreate(BaseModel):
 class FoodLogResponse(BaseModel):
     id: uuid.UUID
     food_item_id: uuid.UUID
+    food_name: Optional[str] = None   # di-populate via join di router
     log_date: date
     meal_type: str
     quantity_g: float

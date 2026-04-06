@@ -19,3 +19,14 @@ CLAUDE.md
 # Database
 *.db
 *.sqlite
+
+# Flutter (nutrishare_flutter/)
+nutrishare_flutter/build/
+nutrishare_flutter/.dart_tool/
+nutrishare_flutter/.pub-cache/
+nutrishare_flutter/.pub/
+nutrishare_flutter/.flutter-plugins
+nutrishare_flutter/.flutter-plugins-dependencies
+nutrishare_flutter/.idea/
+nutrishare_flutter/.claude/
+nutrishare_flutter/.metadata

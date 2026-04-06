@@ -12,11 +12,12 @@ import uuid
 
 router = APIRouter()
 
+
 @router.post("/", response_model=FoodLogResponse, status_code=201)
 def log_food(
     payload: FoodLogCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
 ):
     food = db.query(FoodItem).filter(FoodItem.id == payload.food_item_id).first()
     if not food:
@@ -37,40 +38,17 @@ def log_food(
     db.add(log)
     db.commit()
     db.refresh(log)
+
+    # Tambah nama makanan ke response
+    log.food_name = food.name
     return log
 
-@router.get("/")
-def get_daily_logs(
-    log_date: date,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    logs = db.query(FoodLog).filter(
-        FoodLog.user_id == current_user.id,
-        FoodLog.log_date == log_date
-    ).all()
-    return logs
-
-@router.delete("/{log_id}", status_code=204)
-def delete_log(
-    log_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    log = db.query(FoodLog).filter(
-        FoodLog.id == log_id,
-        FoodLog.user_id == current_user.id
-    ).first()
-    if not log:
-        raise HTTPException(status_code=404, detail="Log tidak ditemukan")
-    db.delete(log)
-    db.commit()
 
 @router.get("/summary")
 def get_daily_summary(
     log_date: date,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
 ):
     result = db.query(
         func.coalesce(func.sum(FoodLog.calories),  0).label("total_calories"),
@@ -79,16 +57,52 @@ def get_daily_summary(
         func.coalesce(func.sum(FoodLog.fat_g),     0).label("total_fat_g"),
     ).filter(
         FoodLog.user_id == current_user.id,
-        FoodLog.log_date == log_date
+        FoodLog.log_date == log_date,
     ).one()
 
     targets = calculate_targets(current_user) or {}
 
     return {
-        "date": log_date,
+        "date":            log_date,
         "total_calories":  result.total_calories,
         "total_protein_g": result.total_protein_g,
         "total_carbs_g":   result.total_carbs_g,
         "total_fat_g":     result.total_fat_g,
-        **{f"target_{k}": v for k, v in targets.items()}
+        **{f"target_{k}": v for k, v in targets.items()},
     }
+
+
+@router.get("/")
+def get_daily_logs(
+    log_date: date,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    rows = (
+        db.query(FoodLog, FoodItem.name.label("food_name"))
+        .join(FoodItem, FoodLog.food_item_id == FoodItem.id)
+        .filter(FoodLog.user_id == current_user.id, FoodLog.log_date == log_date)
+        .all()
+    )
+
+    result = []
+    for log, food_name in rows:
+        log.food_name = food_name
+        result.append(log)
+    return result
+
+
+@router.delete("/{log_id}", status_code=204)
+def delete_log(
+    log_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    log = db.query(FoodLog).filter(
+        FoodLog.id == log_id,
+        FoodLog.user_id == current_user.id,
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log tidak ditemukan")
+    db.delete(log)
+    db.commit()
