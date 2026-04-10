@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class NutritionService {
-  static const String _base = 'http://localhost:8000/api/v1';
+  static const String _base = String.fromEnvironment('BASE_URL', defaultValue: 'https://nutrishare-production.up.railway.app/api/v1');
   final AuthService _auth = AuthService();
 
   Future<Map<String, String>> _headers() async {

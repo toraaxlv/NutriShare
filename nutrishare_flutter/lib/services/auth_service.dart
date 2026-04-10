@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = String.fromEnvironment('BASE_URL', defaultValue: 'https://nutrishare-production.up.railway.app/api/v1');
   static const String _tokenKey = 'access_token';
 
   Future<Map<String, dynamic>> login(String email, String password) async {
