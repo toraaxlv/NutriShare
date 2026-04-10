@@ -103,14 +103,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final ok = await context.read<NutritionProvider>().updateProfile(data);
     if (ok) await context.read<AuthProvider>().checkLoginStatus();
 
+    if (!mounted) return;
     setState(() => _isSaving = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Profil berhasil diperbarui' : 'Gagal menyimpan', style: const TextStyle(color: Colors.white)),
-        backgroundColor: ok ? const Color(0xFF243D2F) : Colors.redAccent,
-      ));
-      if (ok) Navigator.pop(context);
-    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok ? 'Profil berhasil diperbarui' : 'Gagal menyimpan', style: const TextStyle(color: Colors.white)),
+      backgroundColor: ok ? const Color(0xFF243D2F) : Colors.redAccent,
+    ));
+    if (ok) Navigator.pop(context);
   }
 
   @override
@@ -258,14 +257,13 @@ class _EditTargetScreenState extends State<EditTargetScreen> {
     final ok = await context.read<NutritionProvider>().updateProfile(data);
     if (ok) await context.read<AuthProvider>().checkLoginStatus();
 
+    if (!mounted) return;
     setState(() => _isSaving = false);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Target berhasil diperbarui' : 'Gagal menyimpan', style: const TextStyle(color: Colors.white)),
-        backgroundColor: ok ? const Color(0xFF243D2F) : Colors.redAccent,
-      ));
-      if (ok) Navigator.pop(context);
-    }
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok ? 'Target berhasil diperbarui' : 'Gagal menyimpan', style: const TextStyle(color: Colors.white)),
+      backgroundColor: ok ? const Color(0xFF243D2F) : Colors.redAccent,
+    ));
+    if (ok) Navigator.pop(context);
   }
 
   @override

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import date
 import uuid
@@ -28,6 +28,27 @@ class UserProfileUpdate(BaseModel):
     target_weight_kg: Optional[float] = None
     goal_rate_kg_per_week: Optional[float] = None     # lose: 0.25-1.0 | gain: 0.25-0.5 | maintain: 0
     water_target_ml: Optional[int] = None             # target minum air harian (ml)
+
+    @field_validator('weight_kg')
+    @classmethod
+    def weight_must_be_valid(cls, v):
+        if v is not None and (v <= 0 or v > 500):
+            raise ValueError('weight_kg harus antara 1-500 kg')
+        return v
+
+    @field_validator('height_cm')
+    @classmethod
+    def height_must_be_valid(cls, v):
+        if v is not None and (v <= 0 or v > 300):
+            raise ValueError('height_cm harus antara 1-300 cm')
+        return v
+
+    @field_validator('target_weight_kg')
+    @classmethod
+    def target_weight_must_be_valid(cls, v):
+        if v is not None and (v <= 0 or v > 500):
+            raise ValueError('target_weight_kg harus antara 1-500 kg')
+        return v
 
 
 class UserResponse(BaseModel):

@@ -18,8 +18,8 @@ class FoodLogUpdate(BaseModel):
     @field_validator('quantity_g')
     @classmethod
     def quantity_must_be_positive(cls, v):
-        if v <= 0:
-            raise ValueError('quantity_g harus lebih dari 0')
+        if v <= 0 or v > 10000:
+            raise ValueError('quantity_g harus antara 1-10000 gram')
         return v
 
 router = APIRouter()

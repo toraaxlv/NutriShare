@@ -1769,6 +1769,7 @@ class _RegisterSuccessScreenState extends State<_RegisterSuccessScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Akun berhasil dibuat! Silakan login.'),
