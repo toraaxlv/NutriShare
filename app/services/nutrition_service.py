@@ -86,6 +86,9 @@ def calculate_forecast(user) -> dict | None:
     if diff_kg < 0.1:
         return {"forecast_date": date.today().isoformat(), "weeks_needed": 0}
 
+    if not user.goal_rate_kg_per_week or user.goal_rate_kg_per_week <= 0:
+        return None
+
     weeks_needed = diff_kg / user.goal_rate_kg_per_week
     forecast_date = date.today() + timedelta(weeks=weeks_needed)
 

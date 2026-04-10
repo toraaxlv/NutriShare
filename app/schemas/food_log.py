@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import date
 import uuid
@@ -8,6 +8,13 @@ class FoodLogCreate(BaseModel):
     log_date: date
     meal_type: str        # breakfast|lunch|dinner|snack
     quantity_g: float
+
+    @field_validator('quantity_g')
+    @classmethod
+    def quantity_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('quantity_g harus lebih dari 0')
+        return v
 
 class FoodLogResponse(BaseModel):
     id: uuid.UUID

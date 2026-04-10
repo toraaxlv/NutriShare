@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/nutrition_provider.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart';
 
 void main() {
   runApp(const NutriShareApp());
@@ -16,6 +17,7 @@ class NutriShareApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => NutritionProvider()),
       ],
       child: MaterialApp(
         title: 'NutriShare',
@@ -49,7 +51,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final auth = context.watch<AuthProvider>();
 
     if (auth.isLoggedIn) {
-      return const HomeScreen();
+      return const MainScreen();
     }
 
     return const WelcomeScreen();

@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+from typing import Optional
 from app.database import get_db
 from app.models.food_item import FoodItem
 from app.services.auth_service import get_current_user
@@ -9,18 +11,52 @@ import asyncio
 
 router = APIRouter()
 
+
+class FoodItemCreate(BaseModel):
+    name: str
+    calories_per_100g: float
+    protein_per_100g: float
+    carbs_per_100g: float
+    fat_per_100g: float
+    fiber_per_100g: Optional[float] = 0.0
+
+@router.get("/custom")
+def list_custom_foods(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    """Kembalikan custom foods milik user yang sedang login saja."""
+    return (
+        db.query(FoodItem)
+        .filter(FoodItem.source == "custom", FoodItem.created_by == current_user.id)
+        .order_by(FoodItem.name)
+        .all()
+    )
+
+
 @router.get("/search")
 async def search_foods(
     q: str = Query(..., min_length=2, description="Nama makanan"),
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    # 1. Cek DB lokal dulu
-    local_results = db.query(FoodItem).filter(
-        FoodItem.name.ilike(f"%{q}%")
-    ).limit(10).all()
+    # 1. Custom foods milik user ini duluan (prioritas tertinggi)
+    custom_results = db.query(FoodItem).filter(
+        FoodItem.name.ilike(f"%{q}%"),
+        FoodItem.source == "custom",
+        FoodItem.created_by == current_user.id,
+    ).all()
 
-    # 2. Kalau lokal sudah cukup (10+), langsung return
+    # 2. Sisa slot dari DB publik (seed + cache API, bukan custom siapapun)
+    remaining = max(0, 10 - len(custom_results))
+    other_results = db.query(FoodItem).filter(
+        FoodItem.name.ilike(f"%{q}%"),
+        FoodItem.created_by == None,  # noqa: E711 — SQLAlchemy IS NULL
+    ).limit(remaining).all()
+
+    local_results = custom_results + other_results
+
+    # 3. Kalau lokal sudah cukup (10+), langsung return
     if len(local_results) >= 10:
         return {"source": "local", "results": local_results}
 
@@ -39,11 +75,15 @@ async def search_foods(
 
     # 4. Gabungkan & hapus duplikat berdasarkan nama
     combined = usda_results + fatsecret_results
-    seen_names = {item.name.lower() for item in local_results}
+    def _normalize(name: str) -> str:
+        import re
+        return re.sub(r'\s+', ' ', name.lower().strip())
+
+    seen_names = {_normalize(item.name) for item in local_results}
     new_items = []
 
     for item_data in combined:
-        name_lower = item_data["name"].lower()
+        name_lower = _normalize(item_data["name"])
         if name_lower not in seen_names and item_data["calories_per_100g"] > 0:
             seen_names.add(name_lower)
 
@@ -72,9 +112,32 @@ async def search_foods(
         "results": all_results
     }
 
+@router.post("/", status_code=201)
+def create_food(
+    payload: FoodItemCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    food = FoodItem(
+        name=payload.name,
+        calories_per_100g=payload.calories_per_100g,
+        protein_per_100g=payload.protein_per_100g,
+        carbs_per_100g=payload.carbs_per_100g,
+        fat_per_100g=payload.fat_per_100g,
+        fiber_per_100g=payload.fiber_per_100g,
+        source="custom",
+        created_by=current_user.id,
+    )
+    db.add(food)
+    db.commit()
+    db.refresh(food)
+    return food
+
+
 @router.get("/")
 def list_foods(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    return db.query(FoodItem).limit(50).all()
+    # Hanya kembalikan makanan publik (bukan custom milik siapapun)
+    return db.query(FoodItem).filter(FoodItem.created_by == None).limit(50).all()  # noqa: E711

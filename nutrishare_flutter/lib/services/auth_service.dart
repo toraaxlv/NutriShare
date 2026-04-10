@@ -75,6 +75,12 @@ class AuthService {
     return token != null;
   }
 
+  /// Dipanggil oleh NutritionService setiap kali response 401 diterima.
+  /// Menghapus token sehingga app otomatis redirect ke login.
+  Future<void> handleUnauthorized() async {
+    await logout();
+  }
+
   Future<Map<String, dynamic>?> getProfile() async {
     final token = await getToken();
     if (token == null) return null;
@@ -87,6 +93,7 @@ class AuthService {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     }
+    if (response.statusCode == 401) await handleUnauthorized();
     return null;
   }
 

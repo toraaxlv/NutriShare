@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import date
+from datetime import date, timedelta
+from pydantic import BaseModel, field_validator
 from app.database import get_db
 from app.models.food_log import FoodLog
 from app.models.food_item import FoodItem
@@ -9,6 +10,17 @@ from app.schemas.food_log import FoodLogCreate, FoodLogResponse, DailySummary
 from app.services.auth_service import get_current_user
 from app.services.nutrition_service import calculate_targets
 import uuid
+
+
+class FoodLogUpdate(BaseModel):
+    quantity_g: float
+
+    @field_validator('quantity_g')
+    @classmethod
+    def quantity_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('quantity_g harus lebih dari 0')
+        return v
 
 router = APIRouter()
 
@@ -90,6 +102,66 @@ def get_daily_logs(
         log.food_name = food_name
         result.append(log)
     return result
+
+
+@router.get("/streak")
+def get_streak(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    """
+    Streak = hari berturut-turut (dari hari ini ke belakang) dengan minimal 1 food log.
+    Satu query untuk ambil semua tanggal, hitung di Python.
+    """
+    today = date.today()
+
+    # Ambil semua log_date unik milik user dalam satu query
+    logged_dates = {
+        row.log_date
+        for row in db.query(FoodLog.log_date)
+        .filter(FoodLog.user_id == current_user.id)
+        .distinct()
+        .all()
+    }
+
+    streak = 0
+    current_day = today
+    while current_day in logged_dates:
+        streak += 1
+        current_day -= timedelta(days=1)
+
+    return {"streak": streak}
+
+
+@router.patch("/{log_id}", response_model=FoodLogResponse)
+def update_log(
+    log_id: uuid.UUID,
+    payload: FoodLogUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    log = db.query(FoodLog).filter(
+        FoodLog.id == log_id,
+        FoodLog.user_id == current_user.id,
+    ).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log tidak ditemukan")
+
+    food = db.query(FoodItem).filter(FoodItem.id == log.food_item_id).first()
+    if not food:
+        raise HTTPException(status_code=404, detail="Food item tidak ditemukan")
+
+    ratio = payload.quantity_g / 100
+    log.quantity_g = payload.quantity_g
+    log.calories   = round(food.calories_per_100g * ratio, 1)
+    log.protein_g  = round(food.protein_per_100g  * ratio, 1)
+    log.carbs_g    = round(food.carbs_per_100g    * ratio, 1)
+    log.fat_g      = round(food.fat_per_100g      * ratio, 1)
+    db.commit()
+    db.refresh(log)
+
+    log.food_name = food.name
+    return log
 
 
 @router.delete("/{log_id}", status_code=204)

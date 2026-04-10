@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Date, DateTime
+from sqlalchemy import Column, String, Float, Integer, Date, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -30,6 +30,9 @@ class User(Base):
     target_weight_kg        = Column(Float)
     # lose: 0.25|0.5|0.75|1.0 kg/week  |  gain: 0.25|0.5 kg/week  |  maintain: 0
     goal_rate_kg_per_week   = Column(Float, default=0.0)
+
+    # Preferensi tracking
+    water_target_ml         = Column(Integer, default=2000)
 
     created_at              = Column(DateTime(timezone=True), server_default=func.now())
     updated_at              = Column(DateTime(timezone=True), onupdate=func.now())

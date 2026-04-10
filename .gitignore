@@ -1,26 +1,38 @@
-# Virtual environment
+# ── Python ────────────────────────────────────────────────────────────────────
 venv/
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
 
-# Environment variables (JANGAN di-commit!)
+# ── Environment variables ─────────────────────────────────────────────────────
 .env
 
-# VS Code
+# ── Editor & IDE ──────────────────────────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
 
-# macOS
+# ── macOS ─────────────────────────────────────────────────────────────────────
 .DS_Store
-
-# Claude Code context (lokal saja)
+Thumbs.db
 CLAUDE.md
+.claude/
 
-# Database
+# ── Database lokal ────────────────────────────────────────────────────────────
 *.db
 *.sqlite
 
-# Flutter (nutrishare_flutter/)
+# ── Flutter ───────────────────────────────────────────────────────────────────
 nutrishare_flutter/build/
 nutrishare_flutter/.dart_tool/
 nutrishare_flutter/.pub-cache/
@@ -28,5 +40,11 @@ nutrishare_flutter/.pub/
 nutrishare_flutter/.flutter-plugins
 nutrishare_flutter/.flutter-plugins-dependencies
 nutrishare_flutter/.idea/
-nutrishare_flutter/.claude/
 nutrishare_flutter/.metadata
+nutrishare_flutter/.claude/
+nutrishare_flutter/android/.gradle/
+nutrishare_flutter/android/local.properties
+nutrishare_flutter/android/key.properties
+nutrishare_flutter/ios/Pods/
+nutrishare_flutter/ios/.symlinks/
+nutrishare_flutter/ios/Flutter/flutter_export_environment.sh

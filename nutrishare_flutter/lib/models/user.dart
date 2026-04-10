@@ -12,6 +12,7 @@ class User {
   final String? goal;
   final double? targetWeightKg;
   final double? goalRateKgPerWeek;
+  final int? waterTargetMl;
 
   User({
     required this.id,
@@ -27,6 +28,7 @@ class User {
     this.goal,
     this.targetWeightKg,
     this.goalRateKgPerWeek,
+    this.waterTargetMl,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class User {
       goal: json['goal'],
       targetWeightKg: json['target_weight_kg']?.toDouble(),
       goalRateKgPerWeek: json['goal_rate_kg_per_week']?.toDouble(),
+      waterTargetMl: json['water_target_ml'] as int?,
     );
   }
 }

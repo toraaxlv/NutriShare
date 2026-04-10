@@ -27,6 +27,7 @@ class UserProfileUpdate(BaseModel):
     goal: Optional[str] = None                        # lose|maintain|gain
     target_weight_kg: Optional[float] = None
     goal_rate_kg_per_week: Optional[float] = None     # lose: 0.25-1.0 | gain: 0.25-0.5 | maintain: 0
+    water_target_ml: Optional[int] = None             # target minum air harian (ml)
 
 
 class UserResponse(BaseModel):
@@ -43,6 +44,7 @@ class UserResponse(BaseModel):
     goal: Optional[str]
     target_weight_kg: Optional[float]
     goal_rate_kg_per_week: Optional[float]
+    water_target_ml: Optional[int] = 2000
 
     class Config:
         from_attributes = True
