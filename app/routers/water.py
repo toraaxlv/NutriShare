@@ -37,7 +37,7 @@ def get_water(
     return {
         "log_date":  log_date,
         "amount_ml": row.amount_ml if row else 0,
-        "target_ml": current_user.water_target_ml or 2000,
+        "target_ml": _water_target(current_user),
     }
 
 
@@ -61,5 +61,15 @@ def upsert_water(
     return {
         "log_date":  payload.log_date,
         "amount_ml": payload.amount_ml,
-        "target_ml": current_user.water_target_ml or 2000,
+        "target_ml": _water_target(current_user),
     }
+
+
+def _water_target(user: User) -> int:
+    if user.water_target_ml and user.water_target_ml != 2000:
+        return user.water_target_ml
+    if user.gender == "male":
+        return 3700
+    if user.gender == "female":
+        return 2700
+    return 2500
