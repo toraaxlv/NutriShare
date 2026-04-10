@@ -48,6 +48,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
     context.read<AuthProvider>().checkLoginStatus().then((_) {
       if (mounted) setState(() => _checking = false);
     });
+    // Kalau 401 di mana saja, logout dan redirect ke login
+    context.read<NutritionProvider>().onUnauthorized = () {
+      context.read<AuthProvider>().logout();
+    };
   }
 
   @override

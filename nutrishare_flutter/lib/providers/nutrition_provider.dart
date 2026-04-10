@@ -3,6 +3,11 @@ import '../services/nutrition_service.dart';
 
 class NutritionProvider extends ChangeNotifier {
   final NutritionService _svc = NutritionService();
+  VoidCallback? onUnauthorized;
+
+  NutritionProvider() {
+    _svc.onUnauthorized = () => onUnauthorized?.call();
+  }
 
   // ── Dashboard (Discover) ──────────────────────────────────────────────────
   bool isDashboardLoading = false;

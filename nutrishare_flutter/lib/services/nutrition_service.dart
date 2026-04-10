@@ -5,6 +5,7 @@ import 'auth_service.dart';
 class NutritionService {
   static const String _base = String.fromEnvironment('BASE_URL', defaultValue: 'https://nutrishare-production.up.railway.app/api/v1');
   final AuthService _auth = AuthService();
+  void Function()? onUnauthorized;
 
   Future<Map<String, String>> _headers() async {
     final token = await _auth.getToken();
@@ -14,10 +15,11 @@ class NutritionService {
     };
   }
 
-  /// Periksa response: jika 401, hapus token agar app redirect ke login.
+  /// Periksa response: jika 401, hapus token dan panggil onUnauthorized.
   Future<bool> _checkUnauthorized(http.Response res) async {
     if (res.statusCode == 401) {
       await _auth.handleUnauthorized();
+      onUnauthorized?.call();
       return true;
     }
     return false;
