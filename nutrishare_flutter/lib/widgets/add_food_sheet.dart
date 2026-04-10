@@ -225,9 +225,16 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '${((_selectedFood['calories_per_100g'] as num?)?.toDouble() ?? 0).toInt()} kcal · ${((_selectedFood['protein_per_100g'] as num?)?.toDouble() ?? 0).toInt()}g P · ${((_selectedFood['carbs_per_100g'] as num?)?.toDouble() ?? 0).toInt()}g C · ${((_selectedFood['fat_per_100g'] as num?)?.toDouble() ?? 0).toInt()}g F  per 100g',
-                    style: const TextStyle(color: _kDim, fontSize: 11),
+                  Row(
+                    children: [
+                      Text('${((_selectedFood['calories_per_100g'] as num?)?.toDouble() ?? 0).toInt()} kcal  ', style: const TextStyle(color: _kDim, fontSize: 11)),
+                      _MacroChip('P', '${((_selectedFood['protein_per_100g'] as num?)?.toDouble() ?? 0).toInt()}g', const Color(0xFF5B8DEF)),
+                      const SizedBox(width: 4),
+                      _MacroChip('C', '${((_selectedFood['carbs_per_100g'] as num?)?.toDouble() ?? 0).toInt()}g', const Color(0xFFE0A840)),
+                      const SizedBox(width: 4),
+                      _MacroChip('F', '${((_selectedFood['fat_per_100g'] as num?)?.toDouble() ?? 0).toInt()}g', const Color(0xFFE05B5B)),
+                      const Text('  /100g', style: TextStyle(color: _kDim, fontSize: 11)),
+                    ],
                   ),
                   const SizedBox(height: 14),
                   Row(
@@ -259,18 +266,38 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Preview calories — update real-time saat mengetik
+                  // Preview kalori & makro — update real-time saat mengetik
                   ValueListenableBuilder<TextEditingValue>(
                     valueListenable: _qtyCtrl,
                     builder: (_, value, __) {
                       final qty = double.tryParse(value.text.replaceAll(',', '.')) ?? 0;
-                      final cal = ((_selectedFood['calories_per_100g'] as num?)?.toDouble() ?? 0) * qty / 100;
-                      final pro = ((_selectedFood['protein_per_100g']  as num?)?.toDouble() ?? 0) * qty / 100;
-                      final carb= ((_selectedFood['carbs_per_100g']    as num?)?.toDouble() ?? 0) * qty / 100;
-                      final fat = ((_selectedFood['fat_per_100g']      as num?)?.toDouble() ?? 0) * qty / 100;
-                      return Text(
-                        '≈ ${cal.toInt()} kcal · P ${pro.toStringAsFixed(1)}g · C ${carb.toStringAsFixed(1)}g · F ${fat.toStringAsFixed(1)}g',
-                        style: const TextStyle(color: _kGreen, fontSize: 12, fontWeight: FontWeight.bold),
+                      final cal  = ((_selectedFood['calories_per_100g'] as num?)?.toDouble() ?? 0) * qty / 100;
+                      final pro  = ((_selectedFood['protein_per_100g']  as num?)?.toDouble() ?? 0) * qty / 100;
+                      final carb = ((_selectedFood['carbs_per_100g']    as num?)?.toDouble() ?? 0) * qty / 100;
+                      final fat  = ((_selectedFood['fat_per_100g']      as num?)?.toDouble() ?? 0) * qty / 100;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _kLine,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${cal.toInt()}', style: const TextStyle(color: _kGreen, fontSize: 20, fontWeight: FontWeight.bold)),
+                                const Text('kcal', style: TextStyle(color: _kDim, fontSize: 10)),
+                              ],
+                            ),
+                            Container(width: 1, height: 32, color: _kDim.withValues(alpha: 0.3)),
+                            _MacroStat('Protein', pro, const Color(0xFF5B8DEF)),
+                            _MacroStat('Carbs', carb, const Color(0xFFE0A840)),
+                            _MacroStat('Fat', fat, const Color(0xFFE05B5B)),
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -309,5 +336,55 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       'uncategorized': 'Uncategorized',
     };
     return labels[type] ?? type;
+  }
+}
+
+class _MacroStat extends StatelessWidget {
+  final String label;
+  final double value;
+  final Color color;
+
+  const _MacroStat(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          '${value.toStringAsFixed(1)}g',
+          style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: _kDim, fontSize: 10)),
+      ],
+    );
+  }
+}
+
+class _MacroChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MacroChip(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 2),
+          Text(value, style: TextStyle(color: color, fontSize: 10)),
+        ],
+      ),
+    );
   }
 }

@@ -238,9 +238,15 @@ class _FoodResultCard extends StatelessWidget {
                     style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '${calories.toInt()} kcal · P ${protein.toInt()}g · C ${carbs.toInt()}g · F ${fat.toInt()}g  /100g',
-                    style: const TextStyle(color: _kDim, fontSize: 11),
+                  Row(
+                    children: [
+                      Text('${calories.toInt()} kcal  ', style: const TextStyle(color: _kDim, fontSize: 11)),
+                      _MacroChip('P', '${protein.toInt()}g', const Color(0xFF5B8DEF)),
+                      const SizedBox(width: 4),
+                      _MacroChip('C', '${carbs.toInt()}g', const Color(0xFFE0A840)),
+                      const SizedBox(width: 4),
+                      _MacroChip('F', '${fat.toInt()}g', const Color(0xFFE05B5B)),
+                    ],
                   ),
                 ],
               ),
@@ -433,9 +439,15 @@ class _CustomFoodTile extends StatelessWidget {
               children: [
                 Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 3),
-                Text(
-                  '$cal kcal · P ${pro}g · C ${carb}g · F ${fat}g  /100g',
-                  style: const TextStyle(color: _kDim, fontSize: 11),
+                Row(
+                  children: [
+                    Text('$cal kcal  ', style: const TextStyle(color: _kDim, fontSize: 11)),
+                    _MacroChip('P', '${pro}g', const Color(0xFF5B8DEF)),
+                    const SizedBox(width: 4),
+                    _MacroChip('C', '${carb}g', const Color(0xFFE0A840)),
+                    const SizedBox(width: 4),
+                    _MacroChip('F', '${fat}g', const Color(0xFFE05B5B)),
+                  ],
                 ),
               ],
             ),
@@ -452,6 +464,33 @@ class _CustomFoodTile extends StatelessWidget {
             ),
             child: const Text('Log', style: TextStyle(color: _kGreen, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MacroChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MacroChip(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 2),
+          Text(value, style: TextStyle(color: color, fontSize: 10)),
         ],
       ),
     );
