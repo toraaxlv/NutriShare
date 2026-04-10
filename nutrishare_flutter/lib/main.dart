@@ -40,14 +40,27 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  bool _checking = true;
+
   @override
   void initState() {
     super.initState();
-    context.read<AuthProvider>().checkLoginStatus();
+    context.read<AuthProvider>().checkLoginStatus().then((_) {
+      if (mounted) setState(() => _checking = false);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_checking) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF1A3528),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFA8E040)),
+        ),
+      );
+    }
+
     final auth = context.watch<AuthProvider>();
 
     if (auth.isLoggedIn) {
