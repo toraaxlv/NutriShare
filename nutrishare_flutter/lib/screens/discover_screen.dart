@@ -200,87 +200,90 @@ class _EnergyHistoryCard extends StatelessWidget {
   final NutritionProvider nutrition;
   const _EnergyHistoryCard({required this.nutrition});
 
+  static const _days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
   @override
   Widget build(BuildContext context) {
-    final actual = (nutrition.todaySummary?['total_calories'] as num?)?.toDouble() ?? 0;
-    final target = (nutrition.targets?['calories'] as num?)?.toDouble() ?? 0;
+    final history = nutrition.dailyHistory;
+    final target  = history.isNotEmpty
+        ? (history.last['target'] as num?)?.toDouble() ?? 0
+        : (nutrition.targets?['calories'] as num?)?.toDouble() ?? 0;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       decoration: BoxDecoration(color: _kCard, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('KCAL', style: TextStyle(color: _kDim, fontSize: 11)),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 110,
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: _GridPainter(
-                yLabels: ['10', '8', '6', '4', '2'],
-                lineColor: _kLine,
-                labelColor: _kDim,
-              ),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('KCAL', style: TextStyle(color: _kDim, fontSize: 11)),
+              if (target > 0)
+                Text('Target: ${target.toInt()} kcal',
+                    style: const TextStyle(color: _kDim, fontSize: 11)),
+            ],
           ),
-          if (target > 0) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Hari ini: ${actual.toInt()} kkal',
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-                Text(
-                  'Target: ${target.toInt()} kkal',
-                  style: const TextStyle(color: _kDim, fontSize: 11),
-                ),
-              ],
-            ),
-          ],
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 100,
+            child: history.isEmpty
+                ? const Center(
+                    child: Text('Log makanan untuk melihat riwayat',
+                        style: TextStyle(color: _kDim, fontSize: 12)))
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: history.map((d) {
+                      final cal    = (d['calories'] as num?)?.toDouble() ?? 0;
+                      final tgt    = (d['target']   as num?)?.toDouble() ?? 1;
+                      final ratio  = tgt > 0 ? (cal / tgt).clamp(0.0, 1.5) : 0.0;
+                      final isOver = cal > tgt * 1.0 && tgt > 0;
+                      final color  = cal == 0 ? _kLine : (isOver ? _kOrange : _kGreen);
+                      final dateStr = d['date'] as String? ?? '';
+                      final dow    = dateStr.isNotEmpty
+                          ? _days[DateTime.parse(dateStr).weekday % 7]
+                          : '';
+
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (cal > 0)
+                                Text('${(cal / 1000).toStringAsFixed(1)}k',
+                                    style: TextStyle(color: color, fontSize: 8)),
+                              const SizedBox(height: 2),
+                              Container(
+                                height: ratio * 80,
+                                decoration: BoxDecoration(
+                                  color: color,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(dow, style: const TextStyle(color: _kDim, fontSize: 10)),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+          ),
+          const SizedBox(height: 6),
+          Row(children: [
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: _kGreen, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 4),
+            const Text('On target', style: TextStyle(color: _kDim, fontSize: 10)),
+            const SizedBox(width: 12),
+            Container(width: 10, height: 10, decoration: BoxDecoration(color: _kOrange, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 4),
+            const Text('Over target', style: TextStyle(color: _kDim, fontSize: 10)),
+          ]),
         ],
       ),
     );
   }
-}
-
-class _GridPainter extends CustomPainter {
-  final List<String> yLabels;
-  final Color lineColor;
-  final Color labelColor;
-
-  const _GridPainter({
-    required this.yLabels,
-    required this.lineColor,
-    required this.labelColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final linePaint = Paint()..color = lineColor..strokeWidth = 1;
-    const labelWidth = 24.0;
-    const gap = 6.0;
-    final chartLeft = labelWidth + gap;
-    final n = yLabels.length;
-
-    for (int i = 0; i < n; i++) {
-      final y = size.height * i / (n - 1);
-      canvas.drawLine(Offset(chartLeft, y), Offset(size.width, y), linePaint);
-      final tp = TextPainter(
-        text: TextSpan(
-          text: yLabels[i],
-          style: TextStyle(color: labelColor, fontSize: 10),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(0, y - tp.height / 2));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _MacroBarsCard extends StatelessWidget {

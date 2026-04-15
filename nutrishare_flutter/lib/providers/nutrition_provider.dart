@@ -18,6 +18,7 @@ class NutritionProvider extends ChangeNotifier {
   int streak = 0;
   List<dynamic> weightHistory = [];
   List<dynamic> todayLogs = [];
+  List<dynamic> dailyHistory = [];
 
   // ── Diary ─────────────────────────────────────────────────────────────────
   bool isDiaryLoading = false;
@@ -50,6 +51,7 @@ class NutritionProvider extends ChangeNotifier {
       _svc.getStreak(),
       _svc.getWeightHistory(),
       _svc.getDailyLogs(today),
+      _svc.getDailyHistory(),
     ]);
 
     insight = results[0] as String?;
@@ -61,6 +63,7 @@ class NutritionProvider extends ChangeNotifier {
     streak = results[4] as int? ?? 0;
     weightHistory = results[5] as List<dynamic>;
     todayLogs = results[6] as List<dynamic>;
+    dailyHistory = results[7] as List<dynamic>;
 
     isDashboardLoading = false;
     notifyListeners();
@@ -73,6 +76,7 @@ class NutritionProvider extends ChangeNotifier {
     todaySummary = null;
     todayLogs = [];
     weightHistory = [];
+    dailyHistory = [];
     diaryLogs = [];
     diarySummary = null;
     waterMl = 0;
@@ -98,7 +102,7 @@ class NutritionProvider extends ChangeNotifier {
         _svc.getDailySummary(dateStr),
         _svc.getWater(dateStr),
         _svc.getSleep(dateStr),
-      ]);
+      ]).timeout(const Duration(seconds: 15));
 
       diaryLogs    = results[0] as List<dynamic>;
       diarySummary = results[1] as Map<String, dynamic>?;

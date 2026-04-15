@@ -173,6 +173,16 @@ class NutritionService {
     return null;
   }
 
+  Future<List<dynamic>> getDailyHistory({int days = 7}) async {
+    final res = await http.get(
+      Uri.parse('$_base/logs/history?days=$days'),
+      headers: await _headers(),
+    );
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    await _checkUnauthorized(res);
+    return [];
+  }
+
   Future<int> getStreak() async {
     final res = await http.get(Uri.parse('$_base/logs/streak'), headers: await _headers());
     if (res.statusCode == 200) return (jsonDecode(res.body)['streak'] as num?)?.toInt() ?? 0;

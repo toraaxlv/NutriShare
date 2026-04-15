@@ -104,6 +104,43 @@ def get_daily_logs(
     return result
 
 
+@router.get("/history")
+def get_daily_history(
+    days: int = 7,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    """Ringkasan kalori per hari untuk N hari terakhir (termasuk hari ini)."""
+    today = date.today()
+    since = today - timedelta(days=days - 1)
+
+    rows = (
+        db.query(
+            FoodLog.log_date,
+            func.coalesce(func.sum(FoodLog.calories), 0).label("calories"),
+        )
+        .filter(FoodLog.user_id == current_user.id, FoodLog.log_date >= since)
+        .group_by(FoodLog.log_date)
+        .order_by(FoodLog.log_date)
+        .all()
+    )
+
+    # Isi hari yang tidak ada log dengan 0
+    logged = {r.log_date: float(r.calories) for r in rows}
+    targets = calculate_targets(current_user) or {}
+    cal_target = float(targets.get("calories", 0))
+
+    result = []
+    for i in range(days):
+        d = since + timedelta(days=i)
+        result.append({
+            "date":       d.isoformat(),
+            "calories":   logged.get(d, 0.0),
+            "target":     cal_target,
+        })
+    return result
+
+
 @router.get("/streak")
 def get_streak(
     db: Session = Depends(get_db),
