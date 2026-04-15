@@ -114,28 +114,34 @@ def get_daily_history(
     today = date.today()
     since = today - timedelta(days=days - 1)
 
-    rows = (
+    targets = calculate_targets(current_user) or {}
+    cal_target = float(targets.get("calories", 0))
+
+    rows2 = (
         db.query(
             FoodLog.log_date,
-            func.coalesce(func.sum(FoodLog.calories), 0).label("calories"),
+            func.coalesce(func.sum(FoodLog.calories),  0).label("calories"),
+            func.coalesce(func.sum(FoodLog.protein_g), 0).label("protein_g"),
+            func.coalesce(func.sum(FoodLog.carbs_g),   0).label("carbs_g"),
+            func.coalesce(func.sum(FoodLog.fat_g),     0).label("fat_g"),
         )
         .filter(FoodLog.user_id == current_user.id, FoodLog.log_date >= since)
         .group_by(FoodLog.log_date)
         .order_by(FoodLog.log_date)
         .all()
     )
-
-    # Isi hari yang tidak ada log dengan 0
-    logged = {r.log_date: float(r.calories) for r in rows}
-    targets = calculate_targets(current_user) or {}
-    cal_target = float(targets.get("calories", 0))
+    logged2 = {r.log_date: r for r in rows2}
 
     result = []
     for i in range(days):
         d = since + timedelta(days=i)
+        r = logged2.get(d)
         result.append({
             "date":       d.isoformat(),
-            "calories":   logged.get(d, 0.0),
+            "calories":   float(r.calories)  if r else 0.0,
+            "protein_g":  float(r.protein_g) if r else 0.0,
+            "carbs_g":    float(r.carbs_g)   if r else 0.0,
+            "fat_g":      float(r.fat_g)     if r else 0.0,
             "target":     cal_target,
         })
     return result

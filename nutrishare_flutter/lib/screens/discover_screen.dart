@@ -200,7 +200,9 @@ class _EnergyHistoryCard extends StatelessWidget {
   final NutritionProvider nutrition;
   const _EnergyHistoryCard({required this.nutrition});
 
-  static const _days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  static const _kProtein = Color(0xFF4ADE80);
+  static const _kCarbs   = Color(0xFF22D3EE);
+  static const _kFat     = Color(0xFFF09038);
 
   @override
   Widget build(BuildContext context) {
@@ -215,75 +217,179 @@ class _EnergyHistoryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('KCAL', style: TextStyle(color: _kDim, fontSize: 11)),
-              if (target > 0)
-                Text('Target: ${target.toInt()} kcal',
-                    style: const TextStyle(color: _kDim, fontSize: 11)),
-            ],
-          ),
+          const Text('Energy History (kcal)',
+              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          if (history.isEmpty)
+            const SizedBox(
+              height: 160,
+              child: Center(
+                child: Text('Log makanan untuk melihat riwayat',
+                    style: TextStyle(color: _kDim, fontSize: 12)),
+              ),
+            )
+          else
+            SizedBox(
+              height: 180,
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _EnergyBarChartPainter(
+                  history: history,
+                  target: target,
+                  lineColor: _kLine,
+                  labelColor: _kDim,
+                  proteinColor: _kProtein,
+                  carbsColor: _kCarbs,
+                  fatColor: _kFat,
+                ),
+              ),
+            ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 100,
-            child: history.isEmpty
-                ? const Center(
-                    child: Text('Log makanan untuk melihat riwayat',
-                        style: TextStyle(color: _kDim, fontSize: 12)))
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: history.map((d) {
-                      final cal    = (d['calories'] as num?)?.toDouble() ?? 0;
-                      final tgt    = (d['target']   as num?)?.toDouble() ?? 1;
-                      final ratio  = tgt > 0 ? (cal / tgt).clamp(0.0, 1.5) : 0.0;
-                      final isOver = cal > tgt * 1.0 && tgt > 0;
-                      final color  = cal == 0 ? _kLine : (isOver ? _kOrange : _kGreen);
-                      final dateStr = d['date'] as String? ?? '';
-                      final dow    = dateStr.isNotEmpty
-                          ? _days[DateTime.parse(dateStr).weekday % 7]
-                          : '';
-
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              if (cal > 0)
-                                Text('${(cal / 1000).toStringAsFixed(1)}k',
-                                    style: TextStyle(color: color, fontSize: 8)),
-                              const SizedBox(height: 2),
-                              Container(
-                                height: ratio * 80,
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(dow, style: const TextStyle(color: _kDim, fontSize: 10)),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-          ),
-          const SizedBox(height: 6),
           Row(children: [
-            Container(width: 10, height: 10, decoration: BoxDecoration(color: _kGreen, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(width: 4),
-            const Text('On target', style: TextStyle(color: _kDim, fontSize: 10)),
-            const SizedBox(width: 12),
-            Container(width: 10, height: 10, decoration: BoxDecoration(color: _kOrange, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(width: 4),
-            const Text('Over target', style: TextStyle(color: _kDim, fontSize: 10)),
+            _Legend(color: _kProtein, label: 'Protein'),
+            const SizedBox(width: 14),
+            _Legend(color: _kCarbs,   label: 'Carbs'),
+            const SizedBox(width: 14),
+            _Legend(color: _kFat,     label: 'Fat'),
           ]),
         ],
       ),
     );
   }
+}
+
+class _Legend extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _Legend({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(width: 12, height: 3, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+      const SizedBox(width: 5),
+      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+    ],
+  );
+}
+
+class _EnergyBarChartPainter extends CustomPainter {
+  final List<dynamic> history;
+  final double target;
+  final Color lineColor, labelColor, proteinColor, carbsColor, fatColor;
+
+  const _EnergyBarChartPainter({
+    required this.history,
+    required this.target,
+    required this.lineColor,
+    required this.labelColor,
+    required this.proteinColor,
+    required this.carbsColor,
+    required this.fatColor,
+  });
+
+  static const _yAxisW = 34.0;
+  static const _xLabelH = 20.0;
+  static const _gridLines = 5;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (history.isEmpty) return;
+
+    final chartH = size.height - _xLabelH;
+    final chartW = size.width - _yAxisW;
+    final chartLeft = _yAxisW;
+
+    // Determine max Y value (at least target, or actual max)
+    double maxCal = target;
+    for (final d in history) {
+      final cal = (d['calories'] as num?)?.toDouble() ?? 0;
+      if (cal > maxCal) maxCal = cal;
+    }
+    if (maxCal <= 0) maxCal = 2000;
+    // Round up to nice number
+    final step = (maxCal / (_gridLines - 1)).ceilToDouble();
+    maxCal = step * (_gridLines - 1);
+
+    // Grid lines + Y labels
+    final gridPaint = Paint()..color = lineColor..strokeWidth = 0.8;
+    for (int i = 0; i < _gridLines; i++) {
+      final y = chartH * (1 - i / (_gridLines - 1));
+      canvas.drawLine(Offset(chartLeft, y), Offset(size.width, y), gridPaint);
+
+      final val = step * i;
+      final label = val >= 1000
+          ? '${(val / 1000).toStringAsFixed(val % 1000 == 0 ? 0 : 1)}K'
+          : val.toInt().toString();
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: TextStyle(color: labelColor, fontSize: 9)),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(chartLeft - tp.width - 4, y - tp.height / 2));
+    }
+
+    // X-axis line
+    canvas.drawLine(Offset(chartLeft, chartH), Offset(size.width, chartH), gridPaint);
+
+    // Bars
+    final n = history.length;
+    final barW = (chartW / n) * 0.55;
+
+    // X-axis date labels — show first, middle, last
+    final showIdx = {0, n ~/ 2, n - 1};
+
+    for (int i = 0; i < n; i++) {
+      final d       = history[i];
+      final proKcal = ((d['protein_g'] as num?)?.toDouble() ?? 0) * 4;
+      final carbKcal= ((d['carbs_g']   as num?)?.toDouble() ?? 0) * 4;
+      final fatKcal = ((d['fat_g']     as num?)?.toDouble() ?? 0) * 9;
+      final total   = proKcal + carbKcal + fatKcal;
+
+      final cx  = chartLeft + chartW * (n == 1 ? 0.5 : i / (n - 1));
+      final bx  = cx - barW / 2;
+
+      void drawSegment(double fromKcal, double toKcal, Color color, {bool isTop = false, bool isBottom = false}) {
+        if (toKcal <= fromKcal) return;
+        final y1 = chartH * (1 - toKcal   / maxCal);
+        final y2 = chartH * (1 - fromKcal / maxCal);
+        final rr = RRect.fromLTRBAndCorners(
+          bx, y1, bx + barW, y2,
+          topLeft:     Radius.circular(isTop    ? 3 : 0),
+          topRight:    Radius.circular(isTop    ? 3 : 0),
+          bottomLeft:  Radius.circular(isBottom ? 3 : 0),
+          bottomRight: Radius.circular(isBottom ? 3 : 0),
+        );
+        canvas.drawRRect(rr, Paint()..color = color);
+      }
+
+      if (total > 0) {
+        drawSegment(0,                   proKcal,              proteinColor, isBottom: true);
+        drawSegment(proKcal,             proKcal + carbKcal,   carbsColor);
+        drawSegment(proKcal + carbKcal,  total,                fatColor,     isTop: true);
+      }
+
+      // X-axis label
+      if (showIdx.contains(i)) {
+        final dateStr = d['date'] as String? ?? '';
+        String label = dateStr;
+        try {
+          final dt = DateTime.parse(dateStr);
+          const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          label = '${mo[dt.month - 1]} ${dt.day}';
+        } catch (_) {}
+        final tp = TextPainter(
+          text: TextSpan(text: label, style: TextStyle(color: labelColor, fontSize: 9)),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, Offset((cx - tp.width / 2).clamp(chartLeft, size.width - tp.width), chartH + 4));
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _EnergyBarChartPainter old) =>
+      old.history != history || old.target != target;
 }
 
 class _MacroBarsCard extends StatelessWidget {
