@@ -285,35 +285,25 @@ class _QuickActions extends StatelessWidget {
       child: Column(
         children: [
           _FoodCard(
-            leadingWidget: Container(
-              width: 48, height: 48,
-              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: _kGreen, width: 2)),
-              child: const Icon(Icons.restaurant_menu, color: _kGreen, size: 22),
-            ),
-            title: 'Custom meals',
-            subtitle: 'Combine all your foods and recipes to one meal for logging',
+            icon: Icons.set_meal,
+            title: 'Custom Meal',
+            subtitle: 'Combine multiple foods into one meal for quick logging',
             buttonLabel: 'CUSTOM MEAL',
             onTap: () => CustomMealSheet.show(context),
           ),
           const SizedBox(height: 12),
           _FoodCard(
-            leadingWidget: const SizedBox(
-              width: 48, height: 48,
-              child: Center(child: Text('🍳', style: TextStyle(fontSize: 32))),
-            ),
-            title: 'Custom recipe',
-            subtitle: 'create new recipes from your cooking for quick logging',
+            icon: Icons.menu_book_outlined,
+            title: 'Custom Recipe',
+            subtitle: 'Build a recipe from ingredients and save its nutrition',
             buttonLabel: 'CUSTOM RECIPE',
             onTap: () => CustomRecipeSheet.show(context),
           ),
           const SizedBox(height: 12),
           _FoodCard(
-            leadingWidget: const SizedBox(
-              width: 48, height: 48,
-              child: Center(child: Icon(Icons.add, color: _kGreen, size: 32)),
-            ),
+            icon: Icons.bookmarks_outlined,
             title: 'Custom Foods',
-            subtitle: "Browse & add your saved custom foods",
+            subtitle: 'Browse and log your saved custom food items',
             buttonLabel: 'CUSTOM FOOD',
             onTap: () => _CustomFoodListSheet.show(context),
           ),
@@ -500,14 +490,14 @@ class _MacroChip extends StatelessWidget {
 }
 
 class _FoodCard extends StatelessWidget {
-  final Widget leadingWidget;
+  final IconData icon;
   final String title;
   final String subtitle;
   final String buttonLabel;
   final VoidCallback onTap;
 
   const _FoodCard({
-    required this.leadingWidget,
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.buttonLabel,
@@ -523,7 +513,15 @@ class _FoodCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            leadingWidget,
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: _kGreen, width: 1.5),
+                color: _kGreen.withValues(alpha: 0.08),
+              ),
+              child: Icon(icon, color: _kGreen, size: 22),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
