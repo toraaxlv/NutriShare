@@ -71,19 +71,9 @@ class MoreScreen extends StatelessWidget {
               ),
             ),
             _MenuItem(
-              icon: Icons.alternate_email,
-              title: 'Account',
-              subtitle: 'edit or change your information',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-              ),
-            ),
-            const Divider(color: _kDivider, height: 1, indent: 16, endIndent: 16),
-            _MenuItem(
               icon: Icons.person_outline,
               title: 'Profile',
-              subtitle: 'change your description',
+              subtitle: 'Edit your personal info and body metrics',
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const EditProfileScreen()),

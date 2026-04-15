@@ -26,10 +26,9 @@ class NutritionProvider extends ChangeNotifier {
   Map<String, dynamic>? diarySummary;
   DateTime diaryDate = DateTime.now();
 
-  // ── Water & Sleep ─────────────────────────────────────────────────────────
+  // ── Water ─────────────────────────────────────────────────────────────────
   int waterMl = 0;
   int waterTargetMl = 2000;
-  Map<String, dynamic>? sleepData;
 
   // ── Food search ───────────────────────────────────────────────────────────
   List<dynamic> foodSearchResults = [];
@@ -81,7 +80,6 @@ class NutritionProvider extends ChangeNotifier {
     diarySummary = null;
     waterMl = 0;
     waterTargetMl = 2000;
-    sleepData = null;
     foodSearchResults = [];
     customFoods = [];
     streak = 0;
@@ -101,7 +99,6 @@ class NutritionProvider extends ChangeNotifier {
         _svc.getDailyLogs(dateStr),
         _svc.getDailySummary(dateStr),
         _svc.getWater(dateStr),
-        _svc.getSleep(dateStr),
       ]).timeout(const Duration(seconds: 15));
 
       diaryLogs    = results[0] as List<dynamic>;
@@ -109,7 +106,6 @@ class NutritionProvider extends ChangeNotifier {
       final wd = results[2] as Map<String, dynamic>?;
       waterMl       = wd?['amount_ml'] as int? ?? 0;
       waterTargetMl = wd?['target_ml'] as int? ?? 2000;
-      sleepData     = results[3] as Map<String, dynamic>?;
     } catch (_) {
       // Pastikan loading state selalu di-reset meski ada error/timeout
     } finally {
@@ -131,23 +127,6 @@ class NutritionProvider extends ChangeNotifier {
     final result = await _svc.updateProfile({'water_target_ml': targetMl});
     if (result != null) {
       waterTargetMl = targetMl;
-      notifyListeners();
-    }
-  }
-
-  Future<void> saveSleep(DateTime date, {
-    required String bedTime,
-    required String wakeTime,
-    required double durationHours,
-  }) async {
-    final result = await _svc.updateSleep(
-      logDate: _fmt(date),
-      bedTime: bedTime,
-      wakeTime: wakeTime,
-      durationHours: durationHours,
-    );
-    if (result != null) {
-      sleepData = result;
       notifyListeners();
     }
   }

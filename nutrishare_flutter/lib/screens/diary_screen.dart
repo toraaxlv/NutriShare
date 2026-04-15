@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../widgets/add_food_sheet.dart';
-import '../widgets/log_sleep_sheet.dart';
 import '../widgets/macro_nutrient_card.dart';
 
 const _kBg     = Color(0xFF1A3528);
@@ -48,15 +47,16 @@ class _DiaryScreenState extends State<DiaryScreen> {
   }
 
   void _prevDay() {
-    setState(() { _date = _date.subtract(const Duration(days: 1)); _expanded.clear(); });
+    final prev = DateTime(_date.year, _date.month, _date.day - 1);
+    setState(() { _date = prev; _expanded.clear(); });
     _loadAll();
   }
 
   void _nextDay() {
-    final tomorrow = _date.add(const Duration(days: 1));
-    final today    = DateTime.now();
-    if (tomorrow.isAfter(DateTime(today.year, today.month, today.day))) return;
-    setState(() { _date = tomorrow; _expanded.clear(); });
+    final next  = DateTime(_date.year, _date.month, _date.day + 1);
+    final today = DateTime.now();
+    if (next.isAfter(DateTime(today.year, today.month, today.day))) return;
+    setState(() { _date = next; _expanded.clear(); });
     _loadAll();
   }
 
@@ -74,7 +74,7 @@ class _DiaryScreenState extends State<DiaryScreen> {
     return '${_date.day} ${months[_date.month - 1]} ${_date.year}';
   }
 
-  static const _meals = ['uncategorized', 'breakfast', 'lunch', 'dinner', 'snack'];
+  static const _meals = ['breakfast', 'lunch', 'dinner', 'snack'];
 
   @override
   Widget build(BuildContext context) {
@@ -137,10 +137,6 @@ class _DiaryScreenState extends State<DiaryScreen> {
                             onAdd: _showWaterDialog,
                           ),
                           const SizedBox(height: 8),
-                          _SleepRow(
-                            sleepData: nutrition.sleepData,
-                            onLog: () => LogSleepSheet.show(context, date: _date),
-                          ),
                           const SizedBox(height: 12),
                           for (final meal in _meals)
                             _MealSection(
@@ -480,47 +476,6 @@ class _WaterRow extends StatelessWidget {
             ),
             const Spacer(),
             const Icon(Icons.keyboard_arrow_down, color: _kDim),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Sleep row ─────────────────────────────────────────────────────────────────
-
-class _SleepRow extends StatelessWidget {
-  final Map<String, dynamic>? sleepData;
-  final VoidCallback onLog;
-
-  const _SleepRow({required this.sleepData, required this.onLog});
-
-  @override
-  Widget build(BuildContext context) {
-    final duration = (sleepData?['duration'] as num?)?.toDouble();
-    final String label;
-    if (duration != null) {
-      final hh = duration.floor();
-      final mm = ((duration - hh) * 60).round();
-      label = '${hh}j ${mm}m';
-    } else {
-      label = 'Tap untuk log tidur';
-    }
-
-    return GestureDetector(
-      onTap: onLog,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(color: _kCard, borderRadius: BorderRadius.circular(14)),
-        child: Row(
-          children: [
-            const Icon(Icons.nightlight_round, color: Color(0xFF5B8DEF), size: 20),
-            const SizedBox(width: 10),
-            const Text('Sleep', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: _kDim, fontSize: 13)),
-            const Spacer(),
-            const Icon(Icons.edit_outlined, color: _kDim, size: 16),
           ],
         ),
       ),

@@ -187,8 +187,8 @@ class _ReportCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '"${nutrition.insightText}"',
-            style: const TextStyle(color: _kDim, fontSize: 12, fontStyle: FontStyle.italic),
+            nutrition.insightText,
+            style: const TextStyle(color: _kDim, fontSize: 12, height: 1.5),
           ),
         ],
       ),

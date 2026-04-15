@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, profile, foods, logs, insights, weight_logs, water, sleep
+from app.routers import auth, profile, foods, logs, insights, weight_logs, water
 from app.database import engine
 from app import models
 
@@ -30,7 +30,6 @@ app.include_router(logs.router,     prefix="/api/v1/logs",     tags=["Logs"])
 app.include_router(insights.router,     prefix="/api/v1/insights",     tags=["Insights"])
 app.include_router(weight_logs.router,  prefix="/api/v1/weight-logs",  tags=["Weight Logs"])
 app.include_router(water.router,        prefix="/api/v1/water",         tags=["Water"])
-app.include_router(sleep.router,        prefix="/api/v1/sleep",         tags=["Sleep"])
 
 @app.get("/health", tags=["System"])
 def health_check():

@@ -239,47 +239,6 @@ class NutritionService {
     return null;
   }
 
-  // ── Sleep ─────────────────────────────────────────────────────────────────
-
-  Future<Map<String, dynamic>?> getSleep(String date) async {
-    try {
-      final res = await http.get(
-        Uri.parse('$_base/sleep/?log_date=$date'),
-        headers: await _headers(),
-      ).timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        final body = res.body.trim();
-        if (body == 'null') return null;
-        return jsonDecode(body);
-      }
-      await _checkUnauthorized(res);
-      return null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<Map<String, dynamic>?> updateSleep({
-    required String logDate,
-    required String bedTime,
-    required String wakeTime,
-    required double durationHours,
-  }) async {
-    final res = await http.put(
-      Uri.parse('$_base/sleep/'),
-      headers: await _headers(),
-      body: jsonEncode({
-        'log_date':       logDate,
-        'bed_time':       bedTime,
-        'wake_time':      wakeTime,
-        'duration_hours': durationHours,
-      }),
-    );
-    if (res.statusCode == 200) return jsonDecode(res.body);
-    await _checkUnauthorized(res);
-    return null;
-  }
-
   // ── Insights ──────────────────────────────────────────────────────────────
 
   Future<String?> getDailyInsight() async {
