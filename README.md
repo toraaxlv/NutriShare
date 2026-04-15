@@ -17,13 +17,14 @@ Aplikasi mobile tracking nutrisi harian dengan backend FastAPI dan Flutter. Dike
 - Pencatatan makanan harian (breakfast, lunch, dinner, snack)
 - Kalkulasi kalori & makronutrien otomatis (protein, karbohidrat, lemak)
 - Target nutrisi personal berdasarkan profil (gender, usia, berat, tinggi, aktivitas, goal)
-- Pencarian makanan dari database lokal + USDA FoodData Central + FatSecret
-- Custom food — buat dan simpan makanan sendiri
+- Pencarian makanan dari database lokal + USDA FoodData Central
+- Custom food, custom meal, custom recipe
 - Log berat badan dengan grafik perkembangan
-- Pelacakan air minum dan tidur harian
-- Insight harian berbasis pola makan (ML)
+- Pelacakan air minum harian
+- Insight harian berbasis pola makan (rule-based)
 - Goal forecast — estimasi tanggal target berat tercapai
 - Streak logging harian
+- Energy history — bar chart kalori harian per makro (protein, karbs, lemak)
 
 ---
 
@@ -36,7 +37,7 @@ Aplikasi mobile tracking nutrisi harian dengan backend FastAPI dan Flutter. Dike
 | Database | PostgreSQL |
 | ORM | SQLAlchemy |
 | Auth | JWT (HTTPBearer) |
-| External API | USDA FoodData Central, FatSecret OAuth2 |
+| External API | USDA FoodData Central |
 | Config | pydantic-settings, .env |
 | Password | bcrypt |
 
@@ -87,10 +88,7 @@ DATABASE_URL=postgresql://nutrishare_user:nutrishare123@localhost:5432/nutrishar
 SECRET_KEY=your-secret-key-here
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=43200
-ML_SERVICE_URL=http://localhost:8001
 USDA_API_KEY=your-usda-api-key
-FATSECRET_CLIENT_ID=your-fatsecret-client-id
-FATSECRET_CLIENT_SECRET=your-fatsecret-client-secret
 ```
 
 > Jangan commit `.env` ke GitHub.
@@ -107,7 +105,7 @@ python seed_foods.py
 uvicorn app.main:app --reload --port 8000
 ```
 
-API docs tersedia di `http://localhost:8000/docs`
+API docs dinonaktifkan di production. Untuk development, hapus `docs_url=None` di `app/main.py` lalu akses `http://localhost:8000/docs`.
 
 ---
 
@@ -145,7 +143,6 @@ NutriShare/
 │   │   ├── food_log.py
 │   │   ├── weight_log.py
 │   │   ├── water_log.py
-│   │   ├── sleep_log.py
 │   │   └── insight.py
 │   ├── schemas/                 # Pydantic request/response schemas
 │   ├── routers/                 # HTTP route handlers
@@ -155,10 +152,9 @@ NutriShare/
 │   │   ├── logs.py
 │   │   ├── weight_logs.py
 │   │   ├── water.py
-│   │   ├── sleep.py
 │   │   └── insights.py
 │   ├── services/                # Business logic
-│   ├── ml_client/               # USDA & FatSecret API clients
+│   ├── ml_client/               # USDA API client
 │   ├── main.py
 │   ├── database.py
 │   └── config.py
@@ -197,7 +193,7 @@ NutriShare/
 ### Foods
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
-| GET | `/api/v1/foods/search?q=` | Cari makanan (lokal + USDA + FatSecret) |
+| GET | `/api/v1/foods/search?q=` | Cari makanan (lokal + USDA FoodData Central) |
 | GET | `/api/v1/foods/custom` | Daftar custom food milik user |
 | POST | `/api/v1/foods/` | Buat custom food baru |
 
@@ -210,6 +206,7 @@ NutriShare/
 | DELETE | `/api/v1/logs/{id}` | Hapus log |
 | GET | `/api/v1/logs/summary?log_date=` | Ringkasan nutrisi harian vs target |
 | GET | `/api/v1/logs/streak` | Streak hari logging berturut-turut |
+| GET | `/api/v1/logs/history?days=` | Riwayat kalori harian per makro (default 7 hari) |
 
 ### Weight
 | Method | Endpoint | Deskripsi |
@@ -223,12 +220,6 @@ NutriShare/
 | GET | `/api/v1/water/?log_date=` | Data air minum hari itu |
 | PUT | `/api/v1/water/` | Update jumlah air minum (upsert) |
 
-### Sleep
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| GET | `/api/v1/sleep/?log_date=` | Data tidur hari itu |
-| PUT | `/api/v1/sleep/` | Simpan/update data tidur (upsert) |
-
 ### Insights
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
@@ -239,4 +230,3 @@ NutriShare/
 ## External APIs
 
 - **USDA FoodData Central** — API key gratis di https://fdc.nal.usda.gov/api-key-signup.html
-- **FatSecret** — Developer account di https://platform.fatsecret.com
