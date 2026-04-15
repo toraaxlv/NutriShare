@@ -196,20 +196,49 @@ class _ReportCard extends StatelessWidget {
   }
 }
 
-class _EnergyHistoryCard extends StatelessWidget {
+class _EnergyHistoryCard extends StatefulWidget {
   final NutritionProvider nutrition;
   const _EnergyHistoryCard({required this.nutrition});
 
+  @override
+  State<_EnergyHistoryCard> createState() => _EnergyHistoryCardState();
+}
+
+class _EnergyHistoryCardState extends State<_EnergyHistoryCard> {
   static const _kProtein = Color(0xFF4ADE80);
   static const _kCarbs   = Color(0xFF22D3EE);
   static const _kFat     = Color(0xFFF09038);
+  static const _yAxisW   = _EnergyBarChartPainter._yAxisW;
+
+  int? _selectedIndex;
+  Timer? _tooltipTimer;
+
+  @override
+  void dispose() {
+    _tooltipTimer?.cancel();
+    super.dispose();
+  }
+
+  int? _hitTest(Offset pos, double chartW, int n) {
+    if (n == 0) return null;
+    final barAreaLeft = _yAxisW;
+    if (pos.dx < barAreaLeft) return null;
+    int closest = 0;
+    double minDist = double.infinity;
+    for (int i = 0; i < n; i++) {
+      final cx = barAreaLeft + chartW * (n == 1 ? 0.5 : i / (n - 1));
+      final dist = (pos.dx - cx).abs();
+      if (dist < minDist) { minDist = dist; closest = i; }
+    }
+    return minDist < 28 ? closest : null;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final history = nutrition.dailyHistory;
+    final history = widget.nutrition.dailyHistory;
     final target  = history.isNotEmpty
         ? (history.last['target'] as num?)?.toDouble() ?? 0
-        : (nutrition.targets?['calories'] as num?)?.toDouble() ?? 0;
+        : (widget.nutrition.targets?['calories'] as num?)?.toDouble() ?? 0;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
@@ -229,21 +258,37 @@ class _EnergyHistoryCard extends StatelessWidget {
               ),
             )
           else
-            SizedBox(
-              height: 180,
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: _EnergyBarChartPainter(
-                  history: history,
-                  target: target,
-                  lineColor: _kLine,
-                  labelColor: _kDim,
-                  proteinColor: _kProtein,
-                  carbsColor: _kCarbs,
-                  fatColor: _kFat,
+            LayoutBuilder(builder: (_, constraints) {
+              final chartW = constraints.maxWidth - _yAxisW;
+              return GestureDetector(
+                onTapDown: (d) {
+                  final idx = _hitTest(d.localPosition, chartW, history.length);
+                  setState(() => _selectedIndex = idx);
+                  _tooltipTimer?.cancel();
+                  if (idx != null) {
+                    _tooltipTimer = Timer(const Duration(seconds: 3), () {
+                      if (mounted) setState(() => _selectedIndex = null);
+                    });
+                  }
+                },
+                child: SizedBox(
+                  height: 180,
+                  child: CustomPaint(
+                    size: Size.infinite,
+                    painter: _EnergyBarChartPainter(
+                      history: history,
+                      target: target,
+                      selectedIndex: _selectedIndex,
+                      lineColor: _kLine,
+                      labelColor: _kDim,
+                      proteinColor: _kProtein,
+                      carbsColor: _kCarbs,
+                      fatColor: _kFat,
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            }),
           const SizedBox(height: 10),
           Row(children: [
             _Legend(color: _kProtein, label: 'Protein'),
@@ -277,21 +322,23 @@ class _Legend extends StatelessWidget {
 class _EnergyBarChartPainter extends CustomPainter {
   final List<dynamic> history;
   final double target;
+  final int? selectedIndex;
   final Color lineColor, labelColor, proteinColor, carbsColor, fatColor;
+
+  static const _yAxisW  = 34.0;
+  static const _xLabelH = 20.0;
+  static const _gridLines = 5;
 
   const _EnergyBarChartPainter({
     required this.history,
     required this.target,
+    this.selectedIndex,
     required this.lineColor,
     required this.labelColor,
     required this.proteinColor,
     required this.carbsColor,
     required this.fatColor,
   });
-
-  static const _yAxisW = 34.0;
-  static const _xLabelH = 20.0;
-  static const _gridLines = 5;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -385,11 +432,98 @@ class _EnergyBarChartPainter extends CustomPainter {
         tp.paint(canvas, Offset((cx - tp.width / 2).clamp(chartLeft, size.width - tp.width), chartH + 4));
       }
     }
+
+    // Tooltip
+    if (selectedIndex != null && selectedIndex! < n) {
+      final d       = history[selectedIndex!];
+      final proG    = (d['protein_g'] as num?)?.toDouble() ?? 0;
+      final carbG   = (d['carbs_g']   as num?)?.toDouble() ?? 0;
+      final fatG    = (d['fat_g']     as num?)?.toDouble() ?? 0;
+      final proKcal = proG  * 4;
+      final carbKcal= carbG * 4;
+      final fatKcal = fatG  * 9;
+      final total   = proKcal + carbKcal + fatKcal;
+
+      final dateStr = d['date'] as String? ?? '';
+      String dateLabel = dateStr;
+      try {
+        final dt = DateTime.parse(dateStr);
+        const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        dateLabel = '${mo[dt.month - 1]} ${dt.day}, ${dt.year}';
+      } catch (_) {}
+
+      final cx = chartLeft + chartW * (n == 1 ? 0.5 : selectedIndex! / (n - 1));
+
+      // Vertical crosshair
+      canvas.drawLine(
+        Offset(cx, 0), Offset(cx, chartH),
+        Paint()..color = Colors.white.withValues(alpha: 0.12)..strokeWidth = 1,
+      );
+
+      // Build tooltip lines
+      final lines = [
+        _TooltipLine(dateLabel,                   Colors.white,    bold: true),
+        _TooltipLine('Protein  ${proG.toStringAsFixed(1)}g · ${proKcal.toInt()} kcal',   proteinColor),
+        _TooltipLine('Carbs    ${carbG.toStringAsFixed(1)}g · ${carbKcal.toInt()} kcal', carbsColor),
+        _TooltipLine('Fat      ${fatG.toStringAsFixed(1)}g · ${fatKcal.toInt()} kcal',   fatColor),
+        _TooltipLine('Total    ${total.toInt()} kcal',              Colors.white70),
+      ];
+
+      const padH = 10.0, padV = 7.0, lineGap = 3.0, radius = 8.0;
+      const fontSize = 10.0;
+
+      // Layout all painters
+      final painters = lines.map((l) => TextPainter(
+        text: TextSpan(
+          text: l.text,
+          style: TextStyle(
+            color: l.color,
+            fontSize: fontSize,
+            fontWeight: l.bold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout()).toList();
+
+      final boxW = painters.map((p) => p.width).reduce((a, b) => a > b ? a : b) + padH * 2;
+      final boxH = painters.fold(0.0, (s, p) => s + p.height) + lineGap * (painters.length - 1) + padV * 2;
+
+      // Position above bar top, clamped
+      final barTopY = total > 0 ? chartH * (1 - total / maxCal) : chartH;
+      double bx = cx - boxW / 2;
+      bx = bx.clamp(chartLeft, size.width - boxW);
+      double by = barTopY - boxH - 8;
+      if (by < 0) by = barTopY + 8;
+
+      // Background
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(bx, by, boxW, boxH), const Radius.circular(radius)),
+        Paint()..color = const Color(0xFF1A3528),
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(bx, by, boxW, boxH), const Radius.circular(radius)),
+        Paint()..color = Colors.white.withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 1,
+      );
+
+      // Text lines
+      double ty = by + padV;
+      for (final p in painters) {
+        p.paint(canvas, Offset(bx + padH, ty));
+        ty += p.height + lineGap;
+      }
+    }
   }
 
   @override
   bool shouldRepaint(covariant _EnergyBarChartPainter old) =>
-      old.history != history || old.target != target;
+      old.history != history || old.target != target || old.selectedIndex != selectedIndex;
+}
+
+class _TooltipLine {
+  final String text;
+  final Color color;
+  final bool bold;
+  const _TooltipLine(this.text, this.color, {this.bold = false});
 }
 
 class _MacroBarsCard extends StatelessWidget {
