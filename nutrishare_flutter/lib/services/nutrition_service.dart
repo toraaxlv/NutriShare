@@ -232,17 +232,21 @@ class NutritionService {
   // ── Sleep ─────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> getSleep(String date) async {
-    final res = await http.get(
-      Uri.parse('$_base/sleep/?log_date=$date'),
-      headers: await _headers(),
-    );
-    if (res.statusCode == 200) {
-      final body = res.body.trim();
-      if (body == 'null') return null;
-      return jsonDecode(body);
+    try {
+      final res = await http.get(
+        Uri.parse('$_base/sleep/?log_date=$date'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final body = res.body.trim();
+        if (body == 'null') return null;
+        return jsonDecode(body);
+      }
+      await _checkUnauthorized(res);
+      return null;
+    } catch (_) {
+      return null;
     }
-    await _checkUnauthorized(res);
-    return null;
   }
 
   Future<Map<String, dynamic>?> updateSleep({

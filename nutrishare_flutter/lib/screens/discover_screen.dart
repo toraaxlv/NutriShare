@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../widgets/nutrishare_logo.dart';
 import '../widgets/macro_nutrient_card.dart';
+import 'edit_profile_screen.dart';
 
 const _kBg     = Color(0xFF1A3528);
 const _kCard   = Color(0xFF243D2F);
@@ -48,14 +49,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const NutriShareLogo(compact: true),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: _kDim, width: 1.5),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const EditProfileScreen()),
                         ),
-                        child: const Icon(Icons.person, color: _kDim, size: 20),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: _kDim, width: 1.5),
+                          ),
+                          child: const Icon(Icons.person, color: _kDim, size: 20),
+                        ),
                       ),
                     ],
                   ),

@@ -91,23 +91,27 @@ class NutritionProvider extends ChangeNotifier {
     isDiaryLoading = true;
     notifyListeners();
 
-    final dateStr = _fmt(date);
-    final results = await Future.wait([
-      _svc.getDailyLogs(dateStr),
-      _svc.getDailySummary(dateStr),
-      _svc.getWater(dateStr),
-      _svc.getSleep(dateStr),
-    ]);
+    try {
+      final dateStr = _fmt(date);
+      final results = await Future.wait([
+        _svc.getDailyLogs(dateStr),
+        _svc.getDailySummary(dateStr),
+        _svc.getWater(dateStr),
+        _svc.getSleep(dateStr),
+      ]);
 
-    diaryLogs    = results[0] as List<dynamic>;
-    diarySummary = results[1] as Map<String, dynamic>?;
-    final wd = results[2] as Map<String, dynamic>?;
-    waterMl       = wd?['amount_ml'] as int? ?? 0;
-    waterTargetMl = wd?['target_ml'] as int? ?? 2000;
-    sleepData     = results[3] as Map<String, dynamic>?;
-
-    isDiaryLoading = false;
-    notifyListeners();
+      diaryLogs    = results[0] as List<dynamic>;
+      diarySummary = results[1] as Map<String, dynamic>?;
+      final wd = results[2] as Map<String, dynamic>?;
+      waterMl       = wd?['amount_ml'] as int? ?? 0;
+      waterTargetMl = wd?['target_ml'] as int? ?? 2000;
+      sleepData     = results[3] as Map<String, dynamic>?;
+    } catch (_) {
+      // Pastikan loading state selalu di-reset meski ada error/timeout
+    } finally {
+      isDiaryLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> updateWater(DateTime date, int amountMl) async {

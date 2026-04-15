@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../widgets/custom_food_sheet.dart';
 import '../widgets/add_food_sheet.dart';
+import '../widgets/custom_meal_sheet.dart';
+import '../widgets/custom_recipe_sheet.dart';
 
 const _kBg    = Color(0xFF1A3528);
 const _kCard  = Color(0xFF243D2F);
@@ -291,7 +293,7 @@ class _QuickActions extends StatelessWidget {
             title: 'Custom meals',
             subtitle: 'Combine all your foods and recipes to one meal for logging',
             buttonLabel: 'CUSTOM MEAL',
-            onTap: () {},
+            onTap: () => CustomMealSheet.show(context),
           ),
           const SizedBox(height: 12),
           _FoodCard(
@@ -302,7 +304,7 @@ class _QuickActions extends StatelessWidget {
             title: 'Custom recipe',
             subtitle: 'create new recipes from your cooking for quick logging',
             buttonLabel: 'CUSTOM RECIPE',
-            onTap: () {},
+            onTap: () => CustomRecipeSheet.show(context),
           ),
           const SizedBox(height: 12),
           _FoodCard(
