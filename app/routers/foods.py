@@ -6,8 +6,6 @@ from app.database import get_db
 from app.models.food_item import FoodItem
 from app.services.auth_service import get_current_user
 from app.ml_client.usda_client import search_usda
-from app.ml_client.fatsecret_client import search_fatsecret
-import asyncio
 
 router = APIRouter()
 
@@ -60,21 +58,14 @@ async def search_foods(
     if len(local_results) >= 10:
         return {"source": "local", "results": local_results}
 
-    # 3. Hit USDA + FatSecret secara parallel
-    usda_results, fatsecret_results = await asyncio.gather(
-        search_usda(q, max_results=10),
-        search_fatsecret(q, max_results=10),
-        return_exceptions=True
-    )
-
-    # Handle kalau salah satu API error
-    if isinstance(usda_results, Exception):
+    # 3. Hit USDA API
+    try:
+        usda_results = await search_usda(q, max_results=10)
+    except Exception:
         usda_results = []
-    if isinstance(fatsecret_results, Exception):
-        fatsecret_results = []
 
-    # 4. Gabungkan & hapus duplikat berdasarkan nama
-    combined = usda_results + fatsecret_results
+    # 4. Hapus duplikat berdasarkan nama
+    combined = usda_results
     def _normalize(name: str) -> str:
         import re
         return re.sub(r'\s+', ' ', name.lower().strip())
