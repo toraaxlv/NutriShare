@@ -38,6 +38,10 @@ async def search_foods(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
+    import re
+    def _normalize(name: str) -> str:
+        return re.sub(r'\s+', ' ', name.lower().strip())
+
     # 1. Custom foods milik user ini duluan (prioritas tertinggi)
     custom_results = db.query(FoodItem).filter(
         FoodItem.name.ilike(f"%{q}%"),
@@ -45,63 +49,37 @@ async def search_foods(
         FoodItem.created_by == current_user.id,
     ).all()
 
-    # 2. Sisa slot dari DB publik (seed + cache API, bukan custom siapapun)
-    remaining = max(0, 10 - len(custom_results))
+    # 2. Makanan publik dari DB (seed, bukan custom siapapun)
     other_results = db.query(FoodItem).filter(
         FoodItem.name.ilike(f"%{q}%"),
         FoodItem.created_by == None,  # noqa: E711 — SQLAlchemy IS NULL
-    ).limit(remaining).all()
+    ).limit(20).all()
 
     local_results = custom_results + other_results
 
-    # 3. Kalau lokal sudah cukup (10+), langsung return
-    if len(local_results) >= 10:
-        return {"source": "local", "results": local_results}
-
-    # 3. Hit USDA API
+    # 3. Ambil sisa kuota dari USDA tanpa menyimpan ke DB
     try:
-        usda_results = await search_usda(q, max_results=10)
+        usda_raw = await search_usda(q, max_results=20)
     except Exception:
-        usda_results = []
-
-    # 4. Hapus duplikat berdasarkan nama
-    combined = usda_results
-    def _normalize(name: str) -> str:
-        import re
-        return re.sub(r'\s+', ' ', name.lower().strip())
+        usda_raw = []
 
     seen_names = {_normalize(item.name) for item in local_results}
-    new_items = []
-
-    for item_data in combined:
+    usda_results = []
+    for item_data in usda_raw:
         name_lower = _normalize(item_data["name"])
         if name_lower not in seen_names and item_data["calories_per_100g"] > 0:
             seen_names.add(name_lower)
+            usda_results.append(item_data)
 
-            # 5. Cache ke DB lokal
-            food = FoodItem(
-                name=item_data["name"],
-                calories_per_100g=item_data["calories_per_100g"],
-                protein_per_100g=item_data["protein_per_100g"],
-                carbs_per_100g=item_data["carbs_per_100g"],
-                fat_per_100g=item_data["fat_per_100g"],
-                fiber_per_100g=item_data.get("fiber_per_100g", 0),
-                source=item_data["source"]
-            )
-            db.add(food)
-            new_items.append(food)
+    all_results = [
+        {"id": str(item.id), "name": item.name, "source": item.source,
+         "calories_per_100g": item.calories_per_100g, "protein_per_100g": item.protein_per_100g,
+         "carbs_per_100g": item.carbs_per_100g, "fat_per_100g": item.fat_per_100g,
+         "fiber_per_100g": item.fiber_per_100g or 0}
+        for item in local_results
+    ] + usda_results  # USDA tidak punya id
 
-    if new_items:
-        db.commit()
-        for item in new_items:
-            db.refresh(item)
-
-    all_results = list(local_results) + new_items
-    return {
-        "source": "mixed",
-        "total": len(all_results),
-        "results": all_results
-    }
+    return {"source": "mixed", "total": len(all_results), "results": all_results}
 
 @router.post("/", status_code=201)
 def create_food(

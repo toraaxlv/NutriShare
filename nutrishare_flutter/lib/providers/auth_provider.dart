@@ -19,15 +19,21 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    final result = await _authService.login(email, password);
-
-    _isLoading = false;
-    if (result['success']) {
-      _user = result['user'];
-      notifyListeners();
-      return true;
-    } else {
-      _errorMessage = result['message'];
+    try {
+      final result = await _authService.login(email, password);
+      _isLoading = false;
+      if (result['success']) {
+        _user = result['user'];
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = result['message'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = 'Koneksi gagal, coba lagi';
       notifyListeners();
       return false;
     }

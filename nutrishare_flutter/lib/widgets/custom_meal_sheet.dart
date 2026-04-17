@@ -71,7 +71,7 @@ class _CustomMealSheetState extends State<CustomMealSheet> {
     int ok = 0;
     for (final f in _selected) {
       final success = await provider.addFoodLog(
-        foodItemId: f['id'].toString(),
+        food: Map<String, dynamic>.from(f),
         mealType: _mealType,
         quantityG: (f['quantity_g'] as num).toDouble(),
         date: DateTime.now(),

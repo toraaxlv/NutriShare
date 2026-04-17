@@ -9,19 +9,23 @@ class AuthService {
   static const String _tokenKey = 'access_token';
 
   Future<Map<String, dynamic>> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      ).timeout(const Duration(seconds: 15));
 
-    final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
 
-    if (response.statusCode == 200) {
-      await _saveToken(data['access_token']);
-      return {'success': true, 'user': User.fromJson(data['user'])};
-    } else {
-      return {'success': false, 'message': data['detail'] ?? 'Login gagal'};
+      if (response.statusCode == 200) {
+        await _saveToken(data['access_token']);
+        return {'success': true, 'user': User.fromJson(data['user'])};
+      } else {
+        return {'success': false, 'message': data['detail'] ?? 'Login gagal'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Koneksi gagal, coba lagi'};
     }
   }
 

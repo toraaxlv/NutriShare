@@ -4,7 +4,17 @@ from datetime import date
 import uuid
 
 class FoodLogCreate(BaseModel):
-    food_item_id: uuid.UUID
+    # Untuk makanan lokal/custom yang sudah ada di DB
+    food_item_id: Optional[uuid.UUID] = None
+    # Untuk makanan USDA yang belum di-DB (lazy insert saat log)
+    food_name: Optional[str] = None
+    calories_per_100g: Optional[float] = None
+    protein_per_100g: Optional[float] = None
+    carbs_per_100g: Optional[float] = None
+    fat_per_100g: Optional[float] = None
+    fiber_per_100g: float = 0
+    source: str = "usda"
+
     log_date: date
     meal_type: str        # breakfast|lunch|dinner|snack
     quantity_g: float

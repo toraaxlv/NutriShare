@@ -34,6 +34,7 @@ class NutritionProvider extends ChangeNotifier {
   List<dynamic> foodSearchResults = [];
   bool isSearching = false;
   List<dynamic> customFoods = [];
+  final Map<String, List<dynamic>> _searchCache = {};
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
@@ -42,30 +43,38 @@ class NutritionProvider extends ChangeNotifier {
     notifyListeners();
 
     final today = _fmt(DateTime.now());
-    final results = await Future.wait([
-      _svc.getDailyInsight(),
-      _svc.getTargets(),
-      _svc.getForecast(),
-      _svc.getDailySummary(today),
-      _svc.getStreak(),
-      _svc.getWeightHistory(),
-      _svc.getDailyLogs(today),
-      _svc.getDailyHistory(),
-    ]);
 
-    insight = results[0] as String?;
-    final tr = results[1] as Map<String, dynamic>?;
-    targets = tr?['complete'] == true ? tr!['targets'] : null;
-    final fr = results[2] as Map<String, dynamic>?;
-    forecast = fr?['available'] == true ? fr!['forecast'] : null;
-    todaySummary = results[3] as Map<String, dynamic>?;
-    streak = results[4] as int? ?? 0;
-    weightHistory = results[5] as List<dynamic>;
-    todayLogs = results[6] as List<dynamic>;
-    dailyHistory = results[7] as List<dynamic>;
+    // Wave 1: data utama — tampilkan dashboard secepat mungkin
+    try {
+      final results = await Future.wait([
+        _svc.getTargets(),
+        _svc.getForecast(),
+        _svc.getDailySummary(today),
+        _svc.getStreak(),
+        _svc.getWeightHistory(),
+        _svc.getDailyLogs(today),
+        _svc.getDailyHistory(),
+      ]).timeout(const Duration(seconds: 15));
+
+      final tr = results[0] as Map<String, dynamic>?;
+      targets = tr?['complete'] == true ? tr!['targets'] : null;
+      final fr = results[1] as Map<String, dynamic>?;
+      forecast = fr?['available'] == true ? fr!['forecast'] : null;
+      todaySummary = results[2] as Map<String, dynamic>?;
+      streak       = results[3] as int? ?? 0;
+      weightHistory = results[4] as List<dynamic>;
+      todayLogs    = results[5] as List<dynamic>;
+      dailyHistory = results[6] as List<dynamic>;
+    } catch (_) {}
 
     isDashboardLoading = false;
     notifyListeners();
+
+    // Wave 2: insight dimuat terpisah (query berat, tidak blokir dashboard)
+    try {
+      insight = await _svc.getDailyInsight().timeout(const Duration(seconds: 20));
+      notifyListeners();
+    } catch (_) {}
   }
 
   void clearDashboard() {
@@ -132,14 +141,14 @@ class NutritionProvider extends ChangeNotifier {
   }
 
   Future<bool> addFoodLog({
-    required String foodItemId,
+    required Map<String, dynamic> food,
     required String mealType,
     required double quantityG,
     DateTime? date,
   }) async {
     final dateStr = _fmt(date ?? diaryDate);
     final result = await _svc.logFood(
-      foodItemId: foodItemId,
+      food: food,
       logDate: dateStr,
       mealType: mealType,
       quantityG: quantityG,
@@ -188,14 +197,24 @@ class NutritionProvider extends ChangeNotifier {
   // ── Food search ───────────────────────────────────────────────────────────
 
   Future<void> searchFoods(String query) async {
-    if (query.trim().length < 2) {
+    final key = query.trim().toLowerCase();
+    if (key.length < 2) {
       foodSearchResults = [];
       notifyListeners();
       return;
     }
+
+    if (_searchCache.containsKey(key)) {
+      foodSearchResults = _searchCache[key]!;
+      notifyListeners();
+      return;
+    }
+
     isSearching = true;
     notifyListeners();
-    foodSearchResults = await _svc.searchFoods(query.trim());
+    final results = await _svc.searchFoods(key);
+    _searchCache[key] = results;
+    foodSearchResults = results;
     isSearching = false;
     notifyListeners();
   }
@@ -203,6 +222,10 @@ class NutritionProvider extends ChangeNotifier {
   void clearSearch() {
     foodSearchResults = [];
     notifyListeners();
+  }
+
+  void invalidateSearchCache() {
+    _searchCache.clear();
   }
 
   // ── Custom food ───────────────────────────────────────────────────────────
@@ -230,6 +253,7 @@ class NutritionProvider extends ChangeNotifier {
     );
     if (result != null) {
       customFoods = await _svc.getCustomFoods();
+      _searchCache.clear();
       notifyListeners();
     }
     return result;

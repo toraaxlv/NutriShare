@@ -58,20 +58,31 @@ class NutritionService {
   }
 
   Future<Map<String, dynamic>?> logFood({
-    required String foodItemId,
+    required Map<String, dynamic> food,
     required String logDate,
     required String mealType,
     required double quantityG,
   }) async {
+    final body = <String, dynamic>{
+      'log_date': logDate,
+      'meal_type': mealType,
+      'quantity_g': quantityG,
+    };
+    if (food['id'] != null) {
+      body['food_item_id'] = food['id'].toString();
+    } else {
+      body['food_name']         = food['name'];
+      body['calories_per_100g'] = food['calories_per_100g'];
+      body['protein_per_100g']  = food['protein_per_100g'];
+      body['carbs_per_100g']    = food['carbs_per_100g'];
+      body['fat_per_100g']      = food['fat_per_100g'];
+      body['fiber_per_100g']    = food['fiber_per_100g'] ?? 0;
+      body['source']            = food['source'] ?? 'usda';
+    }
     final res = await http.post(
       Uri.parse('$_base/logs/'),
       headers: await _headers(),
-      body: jsonEncode({
-        'food_item_id': foodItemId,
-        'log_date': logDate,
-        'meal_type': mealType,
-        'quantity_g': quantityG,
-      }),
+      body: jsonEncode(body),
     );
     if (res.statusCode == 201) return jsonDecode(res.body);
     await _checkUnauthorized(res);

@@ -80,7 +80,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
     setState(() => _isLogging = true);
     final ok = await context.read<NutritionProvider>().addFoodLog(
-      foodItemId: _selectedFood['id'],
+      food: Map<String, dynamic>.from(_selectedFood),
       mealType: widget.mealType,
       quantityG: qty,
       date: widget.date,

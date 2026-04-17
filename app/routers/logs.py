@@ -31,9 +31,32 @@ def log_food(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
-    food = db.query(FoodItem).filter(FoodItem.id == payload.food_item_id).first()
-    if not food:
-        raise HTTPException(status_code=404, detail="Food item tidak ditemukan")
+    if payload.food_item_id:
+        food = db.query(FoodItem).filter(FoodItem.id == payload.food_item_id).first()
+        if not food:
+            raise HTTPException(status_code=404, detail="Food item tidak ditemukan")
+    elif payload.food_name and payload.calories_per_100g is not None:
+        import re
+        def _norm(s): return re.sub(r'\s+', ' ', s.lower().strip())
+        food = db.query(FoodItem).filter(
+            FoodItem.created_by == None,  # noqa: E711
+            FoodItem.source == payload.source,
+        ).all()
+        food = next((f for f in food if _norm(f.name) == _norm(payload.food_name)), None)
+        if not food:
+            food = FoodItem(
+                name=payload.food_name,
+                calories_per_100g=payload.calories_per_100g,
+                protein_per_100g=payload.protein_per_100g or 0,
+                carbs_per_100g=payload.carbs_per_100g or 0,
+                fat_per_100g=payload.fat_per_100g or 0,
+                fiber_per_100g=payload.fiber_per_100g,
+                source=payload.source,
+            )
+            db.add(food)
+            db.flush()
+    else:
+        raise HTTPException(status_code=422, detail="food_item_id atau data makanan wajib diisi")
 
     ratio = payload.quantity_g / 100
     log = FoodLog(

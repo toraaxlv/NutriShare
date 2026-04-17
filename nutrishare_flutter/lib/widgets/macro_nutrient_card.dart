@@ -27,10 +27,10 @@ const _mealLabels = {
 
 // Maps macro label → food log field key
 const _nutrientKey = {
-  'Energy':   'calories',
-  'Protein':  'protein_g',
-  'Net Carbs':'carbs_g',
-  'Fat':      'fat_g',
+  'Energy':         'calories',
+  'Protein':        'protein_g',
+  'Carbohydrates':  'carbs_g',
+  'Fat':            'fat_g',
 };
 
 class MacroNutrientCard extends StatelessWidget {
@@ -70,7 +70,7 @@ class MacroNutrientCard extends StatelessWidget {
           const SizedBox(height: 8),
           _MacroRow(label: 'Protein',   actual: proActual,  target: proTarget,  unit: 'g',    color: const Color(0xFF5B8DEF),logs: logs),
           const SizedBox(height: 8),
-          _MacroRow(label: 'Net Carbs', actual: carbActual, target: carbTarget, unit: 'g',    color: _kGreen,               logs: logs),
+          _MacroRow(label: 'Carbohydrates', actual: carbActual, target: carbTarget, unit: 'g',    color: _kGreen,               logs: logs),
           const SizedBox(height: 8),
           _MacroRow(label: 'Fat',       actual: fatActual,  target: fatTarget,  unit: 'g',    color: const Color(0xFFD94F4F),logs: logs),
         ],
@@ -125,7 +125,7 @@ class _MacroRow extends StatelessWidget {
                     children: [
                       TextSpan(
                         text: label,
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, decoration: TextDecoration.underline, decorationColor: Colors.white54),
                       ),
                       TextSpan(
                         text: '- $valueText',
