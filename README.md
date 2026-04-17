@@ -18,7 +18,8 @@ Aplikasi mobile tracking nutrisi harian dengan backend FastAPI dan Flutter. Dike
 - Kalkulasi kalori & makronutrien otomatis (protein, karbohidrat, lemak)
 - Target nutrisi personal berdasarkan profil (gender, usia, berat, tinggi, aktivitas, goal)
 - Pencarian makanan dari database lokal + USDA FoodData Central
-- Custom food, custom meal, custom recipe
+- Custom food, custom meal, custom recipe (dengan edit & restore bahan)
+- Unit selector saat log (g / tbsp / tsp / cup)
 - Log berat badan dengan grafik perkembangan
 - Pelacakan air minum harian
 - Insight harian berbasis pola makan (rule-based)
@@ -141,6 +142,7 @@ NutriShare/
 │   │   ├── user.py
 │   │   ├── food_item.py
 │   │   ├── food_log.py
+│   │   ├── recipe_ingredient.py
 │   │   ├── weight_log.py
 │   │   ├── water_log.py
 │   │   └── insight.py
@@ -194,8 +196,11 @@ NutriShare/
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
 | GET | `/api/v1/foods/search?q=` | Cari makanan (lokal + USDA FoodData Central) |
-| GET | `/api/v1/foods/custom` | Daftar custom food milik user |
-| POST | `/api/v1/foods/` | Buat custom food baru |
+| GET | `/api/v1/foods/custom` | Daftar custom food milik user (include `has_ingredients`) |
+| GET | `/api/v1/foods/` | Daftar makanan publik (seed) |
+| POST | `/api/v1/foods/` | Buat custom food / recipe baru |
+| PATCH | `/api/v1/foods/{id}` | Update custom food / recipe |
+| GET | `/api/v1/foods/{id}/ingredients` | Ambil bahan-bahan custom recipe |
 
 ### Food Logs
 | Method | Endpoint | Deskripsi |
