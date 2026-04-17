@@ -12,6 +12,7 @@ const _kOrange = Color(0xFFF09038);
 const _kDim    = Color(0xFF6B9080);
 const _kLine   = Color(0xFF2B4A38);
 const _kRed    = Color(0xFFD94F4F);
+const _unitToG = {'g': 1.0, 'tbsp': 15.0, 'tsp': 5.0, 'cup': 240.0};
 
 class DiaryScreen extends StatefulWidget {
   const DiaryScreen({super.key});
@@ -44,6 +45,13 @@ class _DiaryScreenState extends State<DiaryScreen> {
     final date = _date;
     await context.read<NutritionProvider>().loadDiary(date);
     if (gen != _loadGen || !mounted) return;
+    // Auto-expand meal yang sudah ada makanan
+    final nutrition = context.read<NutritionProvider>();
+    setState(() {
+      for (final meal in _meals) {
+        if (nutrition.logsForMeal(meal).isNotEmpty) _expanded.add(meal);
+      }
+    });
   }
 
   void _prevDay() {
@@ -515,7 +523,7 @@ class _MealSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final totalCal = logs.fold<double>(0, (s, l) => s + ((l['calories'] as num?)?.toDouble() ?? 0));
-    final show = isExpanded || logs.isNotEmpty;
+    final show = isExpanded;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -674,6 +682,7 @@ class _LogDetailSheet extends StatefulWidget {
 
 class _LogDetailSheetState extends State<_LogDetailSheet> {
   late final TextEditingController _ctrl;
+  String _unit = 'g';
   bool _saving = false;
 
   // Per-gram ratios derived from original log
@@ -682,11 +691,11 @@ class _LogDetailSheetState extends State<_LogDetailSheet> {
   late final double _carbPerG;
   late final double _fatPerG;
 
-  double get _currentQty => double.tryParse(_ctrl.text.replaceAll(',', '.')) ?? widget.qty;
-  double get _previewCal  => _calPerG  * _currentQty;
-  double get _previewPro  => _proPerG  * _currentQty;
-  double get _previewCarb => _carbPerG * _currentQty;
-  double get _previewFat  => _fatPerG  * _currentQty;
+  double get _currentQtyG => (double.tryParse(_ctrl.text.replaceAll(',', '.')) ?? 0) * (_unitToG[_unit] ?? 1.0);
+  double get _previewCal  => _calPerG  * _currentQtyG;
+  double get _previewPro  => _proPerG  * _currentQtyG;
+  double get _previewCarb => _carbPerG * _currentQtyG;
+  double get _previewFat  => _fatPerG  * _currentQtyG;
 
   @override
   void initState() {
@@ -709,8 +718,9 @@ class _LogDetailSheetState extends State<_LogDetailSheet> {
   Future<void> _save() async {
     final val = double.tryParse(_ctrl.text.replaceAll(',', '.'));
     if (val == null || val <= 0) return;
+    final quantityG = val * (_unitToG[_unit] ?? 1.0);
     setState(() => _saving = true);
-    final ok = await widget.onUpdate(widget.log['id'].toString(), val);
+    final ok = await widget.onUpdate(widget.log['id'].toString(), quantityG);
     if (mounted) {
       setState(() => _saving = false);
       if (ok) {
@@ -768,7 +778,7 @@ class _LogDetailSheetState extends State<_LogDetailSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Gram input
+            // Quantity input + unit selector
             Row(
               children: [
                 const Text('Quantity', style: TextStyle(color: Colors.white70, fontSize: 14)),
@@ -780,16 +790,44 @@ class _LogDetailSheetState extends State<_LogDetailSheet> {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    decoration: const InputDecoration(
-                      suffixText: 'g',
-                      suffixStyle: TextStyle(color: _kDim),
-                      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: _kDim)),
-                      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: _kGreen)),
+                    decoration: InputDecoration(
+                      suffixText: _unit,
+                      suffixStyle: const TextStyle(color: _kDim),
+                      enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: _kDim)),
+                      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: _kGreen)),
                       isDense: true,
                     ),
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: _unitToG.keys.map((u) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () => setState(() {
+                    _unit = u;
+                    _ctrl.text = u == 'g' ? widget.qty.toInt().toString() : '1';
+                  }),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _unit == u ? _kGreen : _kCard,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _unit == u ? _kGreen : _kLine),
+                    ),
+                    child: Text(
+                      u,
+                      style: TextStyle(
+                        color: _unit == u ? _kBg : Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              )).toList(),
             ),
             const SizedBox(height: 20),
 

@@ -13,6 +13,45 @@ const _kGreen = Color(0xFFA8E040);
 const _kDim   = Color(0xFF6B9080);
 const _kLine  = Color(0xFF2B4A38);
 
+Future<void> _showMealPicker(BuildContext context, dynamic food) async {
+  const meals = [
+    ('breakfast', 'Breakfast', Icons.wb_sunny_outlined),
+    ('lunch',     'Lunch',     Icons.lunch_dining_outlined),
+    ('dinner',    'Dinner',    Icons.dinner_dining_outlined),
+    ('snack',     'Snack',     Icons.cookie_outlined),
+  ];
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Container(
+      decoration: const BoxDecoration(
+        color: _kCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: _kLine, borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+          const Text('Tambah ke', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          ...meals.map((m) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(m.$3, color: _kGreen, size: 20),
+            title: Text(m.$2, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            onTap: () {
+              Navigator.pop(ctx);
+              AddFoodSheet.show(context, mealType: m.$1, date: DateTime.now(), preselectedFood: food);
+            },
+          )),
+        ],
+      ),
+    ),
+  );
+}
+
 class FoodsScreen extends StatefulWidget {
   const FoodsScreen({super.key});
 
@@ -196,12 +235,7 @@ class _FoodResultCard extends StatelessWidget {
   const _FoodResultCard({required this.food});
 
   void _onTap(BuildContext context) {
-    AddFoodSheet.show(
-      context,
-      mealType: 'uncategorized',
-      date: DateTime.now(),
-      preselectedFood: food,
-    );
+    _showMealPicker(context, food);
   }
 
   @override
@@ -316,14 +350,15 @@ class _QuickActions extends StatelessWidget {
 // ── Custom food list sheet ────────────────────────────────────────────────────
 
 class _CustomFoodListSheet extends StatefulWidget {
-  const _CustomFoodListSheet();
+  final BuildContext screenContext;
+  const _CustomFoodListSheet({required this.screenContext});
 
   static void show(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _CustomFoodListSheet(),
+      builder: (_) => _CustomFoodListSheet(screenContext: context),
     );
   }
 
@@ -395,7 +430,7 @@ class _CustomFoodListSheetState extends State<_CustomFoodListSheet> {
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (ctx, i) {
                         final f = foods[i];
-                        return _CustomFoodTile(food: f);
+                        return _CustomFoodTile(food: f, screenContext: widget.screenContext);
                       },
                     ),
             ),
@@ -408,7 +443,8 @@ class _CustomFoodListSheetState extends State<_CustomFoodListSheet> {
 
 class _CustomFoodTile extends StatelessWidget {
   final dynamic food;
-  const _CustomFoodTile({required this.food});
+  final BuildContext screenContext;
+  const _CustomFoodTile({required this.food, required this.screenContext});
 
   @override
   Widget build(BuildContext context) {
@@ -444,10 +480,22 @@ class _CustomFoodTile extends StatelessWidget {
               ],
             ),
           ),
+          GestureDetector(
+            onTap: () async {
+              final foodMap = Map<String, dynamic>.from(food as Map);
+              if (foodMap['has_ingredients'] == true) {
+                await CustomRecipeSheet.show(context, existingFood: foodMap);
+              } else {
+                await CustomFoodSheet.show(context, existingFood: foodMap);
+              }
+            },
+            child: const Icon(Icons.edit_outlined, color: _kDim, size: 18),
+          ),
+          const SizedBox(width: 10),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              AddFoodSheet.show(context, mealType: 'uncategorized', date: DateTime.now(), preselectedFood: food);
+              _showMealPicker(screenContext, food);
             },
             style: TextButton.styleFrom(
               backgroundColor: _kGreen.withValues(alpha: 0.15),

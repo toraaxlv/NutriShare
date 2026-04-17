@@ -8,6 +8,7 @@ const _kCard  = Color(0xFF243D2F);
 const _kGreen = Color(0xFFA8E040);
 const _kDim   = Color(0xFF6B9080);
 const _kLine  = Color(0xFF2B4A38);
+const _unitToG = {'g': 1.0, 'tbsp': 15.0, 'tsp': 5.0, 'cup': 240.0};
 
 class CustomMealSheet extends StatefulWidget {
   const CustomMealSheet({super.key});
@@ -49,9 +50,12 @@ class _CustomMealSheetState extends State<CustomMealSheet> {
   }
 
   void _addFood(dynamic food) {
-    final id = food['id']?.toString();
-    if (id == null) return;
-    if (_selected.any((f) => f['id']?.toString() == id)) return;
+    final id   = food['id']?.toString();
+    final name = food['name']?.toString() ?? '';
+    final isDupe = id != null
+        ? _selected.any((f) => f['id']?.toString() == id)
+        : _selected.any((f) => f['name']?.toString() == name);
+    if (isDupe) return;
     setState(() {
       _selected.add({...Map<String, dynamic>.from(food as Map), 'quantity_g': 100.0});
     });
@@ -289,6 +293,7 @@ class _SelectedTile extends StatefulWidget {
 
 class _SelectedTileState extends State<_SelectedTile> {
   late final TextEditingController _ctrl;
+  String _unit = 'g';
 
   @override
   void initState() {
@@ -300,6 +305,13 @@ class _SelectedTileState extends State<_SelectedTile> {
   void dispose() {
     _ctrl.dispose();
     super.dispose();
+  }
+
+  void _notifyQty(String v) {
+    final parsed = double.tryParse(v);
+    if (parsed != null && parsed > 0) {
+      widget.onQtyChanged(parsed * (_unitToG[_unit] ?? 1.0));
+    }
   }
 
   @override
@@ -317,47 +329,71 @@ class _SelectedTileState extends State<_SelectedTile> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _kGreen.withValues(alpha: 0.4)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.check_circle, color: _kGreen, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                Text('$totalCal kcal total', style: const TextStyle(color: _kDim, fontSize: 11)),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 64,
-            child: TextField(
-              controller: _ctrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              textAlign: TextAlign.center,
-              decoration: InputDecoration(
-                isDense: true,
-                suffixText: 'g',
-                suffixStyle: const TextStyle(color: _kDim, fontSize: 10),
-                filled: true,
-                fillColor: _kBg,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kLine)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kLine)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kGreen)),
+          Row(
+            children: [
+              const Icon(Icons.check_circle, color: _kGreen, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('$totalCal kcal total', style: const TextStyle(color: _kDim, fontSize: 11)),
+                  ],
+                ),
               ),
-              onChanged: (v) {
-                final parsed = double.tryParse(v);
-                if (parsed != null && parsed > 0) widget.onQtyChanged(parsed);
-              },
-            ),
+              SizedBox(
+                width: 64,
+                child: TextField(
+                  controller: _ctrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    suffixText: _unit,
+                    suffixStyle: const TextStyle(color: _kDim, fontSize: 10),
+                    filled: true,
+                    fillColor: _kBg,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kLine)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kLine)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kGreen)),
+                  ),
+                  onChanged: _notifyQty,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: widget.onRemove,
+                child: const Icon(Icons.remove_circle_outline, color: Color(0xFFE05B5B), size: 20),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: widget.onRemove,
-            child: const Icon(Icons.remove_circle_outline, color: Color(0xFFE05B5B), size: 20),
+          const SizedBox(height: 8),
+          Row(
+            children: _unitToG.keys.map((u) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () => setState(() {
+                  _unit = u;
+                  _ctrl.text = u == 'g' ? '100' : '1';
+                  _notifyQty(_ctrl.text);
+                }),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _unit == u ? _kGreen : _kBg,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: _unit == u ? _kGreen : _kLine),
+                  ),
+                  child: Text(u, style: TextStyle(color: _unit == u ? _kBg : Colors.white60, fontSize: 10, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            )).toList(),
           ),
         ],
       ),

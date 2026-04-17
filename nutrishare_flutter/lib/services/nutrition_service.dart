@@ -155,6 +155,7 @@ class NutritionService {
     required double carbsPer100g,
     required double fatPer100g,
     double fiberPer100g = 0,
+    List<Map<String, dynamic>> ingredients = const [],
   }) async {
     final res = await http.post(
       Uri.parse('$_base/foods/'),
@@ -166,11 +167,50 @@ class NutritionService {
         'carbs_per_100g': carbsPer100g,
         'fat_per_100g': fatPer100g,
         'fiber_per_100g': fiberPer100g,
+        'ingredients': ingredients,
       }),
     );
     if (res.statusCode == 201) return jsonDecode(res.body);
     await _checkUnauthorized(res);
     return null;
+  }
+
+  Future<Map<String, dynamic>?> updateFood({
+    required String foodId,
+    required String name,
+    required double caloriesPer100g,
+    required double proteinPer100g,
+    required double carbsPer100g,
+    required double fatPer100g,
+    double fiberPer100g = 0,
+    List<Map<String, dynamic>> ingredients = const [],
+  }) async {
+    final res = await http.patch(
+      Uri.parse('$_base/foods/$foodId'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'name': name,
+        'calories_per_100g': caloriesPer100g,
+        'protein_per_100g': proteinPer100g,
+        'carbs_per_100g': carbsPer100g,
+        'fat_per_100g': fatPer100g,
+        'fiber_per_100g': fiberPer100g,
+        'ingredients': ingredients,
+      }),
+    );
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    await _checkUnauthorized(res);
+    return null;
+  }
+
+  Future<List<dynamic>> getRecipeIngredients(String foodId) async {
+    final res = await http.get(
+      Uri.parse('$_base/foods/$foodId/ingredients'),
+      headers: await _headers(),
+    );
+    if (res.statusCode == 200) return jsonDecode(res.body);
+    await _checkUnauthorized(res);
+    return [];
   }
 
   Future<Map<String, dynamic>?> updateProfile(Map<String, dynamic> data) async {

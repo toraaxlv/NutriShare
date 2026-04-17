@@ -8,16 +8,19 @@ const _kCard  = Color(0xFF243D2F);
 const _kGreen = Color(0xFFA8E040);
 const _kDim   = Color(0xFF6B9080);
 const _kLine  = Color(0xFF2B4A38);
+const _unitToG = {'g': 1.0, 'tbsp': 15.0, 'tsp': 5.0, 'cup': 240.0};
 
 class CustomRecipeSheet extends StatefulWidget {
-  const CustomRecipeSheet({super.key});
+  final Map<String, dynamic>? existingFood;
 
-  static Future<Map<String, dynamic>?> show(BuildContext context) {
+  const CustomRecipeSheet({super.key, this.existingFood});
+
+  static Future<Map<String, dynamic>?> show(BuildContext context, {Map<String, dynamic>? existingFood}) {
     return showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const CustomRecipeSheet(),
+      builder: (_) => CustomRecipeSheet(existingFood: existingFood),
     );
   }
 
@@ -31,6 +34,32 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
   Timer? _debounce;
   final List<Map<String, dynamic>> _ingredients = [];
   bool _isSaving = false;
+  bool _isLoadingIngredients = false;
+
+  bool get _isEdit => widget.existingFood != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEdit) {
+      _nameCtrl.text = widget.existingFood!['name'] as String? ?? '';
+      final id = widget.existingFood!['id']?.toString();
+      if (id != null) {
+        _isLoadingIngredients = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          final ings = await context.read<NutritionProvider>().getRecipeIngredients(id);
+          if (mounted) {
+            setState(() {
+              for (final ing in ings) {
+                _ingredients.add(Map<String, dynamic>.from(ing as Map));
+              }
+              _isLoadingIngredients = false;
+            });
+          }
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -48,9 +77,12 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
   }
 
   void _addIngredient(dynamic food) {
-    final id = food['id']?.toString();
-    if (id == null) return;
-    if (_ingredients.any((f) => f['id']?.toString() == id)) return;
+    final id   = food['id']?.toString();
+    final name = food['name']?.toString() ?? '';
+    final isDupe = id != null
+        ? _ingredients.any((f) => f['id']?.toString() == id)
+        : _ingredients.any((f) => f['name']?.toString() == name);
+    if (isDupe) return;
     setState(() {
       _ingredients.add({...Map<String, dynamic>.from(food as Map), 'quantity_g': 100.0});
     });
@@ -81,13 +113,28 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
     if (totalG == 0) return {'cal': 0, 'pro': 0, 'carb': 0, 'fat': 0, 'total_g': 0};
 
     return {
-      'cal':     totalCal  / totalG * 100,
-      'pro':     totalPro  / totalG * 100,
-      'carb':    totalCarb / totalG * 100,
-      'fat':     totalFat  / totalG * 100,
-      'total_g': totalG,
+      'cal':       totalCal  / totalG * 100,
+      'pro':       totalPro  / totalG * 100,
+      'carb':      totalCarb / totalG * 100,
+      'fat':       totalFat  / totalG * 100,
+      'total_g':   totalG,
+      'total_cal': totalCal,
+      'total_pro': totalPro,
+      'total_carb':totalCarb,
+      'total_fat': totalFat,
     };
   }
+
+  List<Map<String, dynamic>> get _ingredientsPayload => _ingredients.map((ing) => {
+    'name':               ing['name']?.toString() ?? '',
+    'calories_per_100g':  (ing['calories_per_100g'] as num?)?.toDouble() ?? 0,
+    'protein_per_100g':   (ing['protein_per_100g']  as num?)?.toDouble() ?? 0,
+    'carbs_per_100g':     (ing['carbs_per_100g']    as num?)?.toDouble() ?? 0,
+    'fat_per_100g':       (ing['fat_per_100g']      as num?)?.toDouble() ?? 0,
+    'fiber_per_100g':     (ing['fiber_per_100g']    as num?)?.toDouble() ?? 0,
+    'source':             ing['source']?.toString() ?? 'usda',
+    'quantity_g':         (ing['quantity_g'] as num?)?.toDouble() ?? 100,
+  }).toList();
 
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
@@ -106,13 +153,29 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
 
     setState(() => _isSaving = true);
     final macros = _calculatedMacros;
-    final food = await context.read<NutritionProvider>().createFood(
-      name: name,
-      caloriesPer100g: macros['cal']!,
-      proteinPer100g:  macros['pro']!,
-      carbsPer100g:    macros['carb']!,
-      fatPer100g:      macros['fat']!,
-    );
+    final provider = context.read<NutritionProvider>();
+
+    Map<String, dynamic>? food;
+    if (_isEdit) {
+      food = await provider.updateFood(
+        foodId:          widget.existingFood!['id'].toString(),
+        name:            name,
+        caloriesPer100g: macros['cal']!,
+        proteinPer100g:  macros['pro']!,
+        carbsPer100g:    macros['carb']!,
+        fatPer100g:      macros['fat']!,
+        ingredients:     _ingredientsPayload,
+      );
+    } else {
+      food = await provider.createFood(
+        name:            name,
+        caloriesPer100g: macros['cal']!,
+        proteinPer100g:  macros['pro']!,
+        carbsPer100g:    macros['carb']!,
+        fatPer100g:      macros['fat']!,
+        ingredients:     _ingredientsPayload,
+      );
+    }
     setState(() => _isSaving = false);
 
     if (mounted) Navigator.pop(context, food);
@@ -148,15 +211,15 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Custom Recipe', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text('Simpan sebagai 1 custom food', style: TextStyle(color: _kDim, fontSize: 12)),
+                      Text(_isEdit ? 'Edit Recipe' : 'Custom Recipe', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(_isEdit ? 'Ubah bahan dan nama resep' : 'Simpan sebagai 1 custom food', style: const TextStyle(color: _kDim, fontSize: 12)),
                     ],
                   ),
                   ElevatedButton(
-                    onPressed: _isSaving ? null : _save,
+                    onPressed: (_isSaving || _isLoadingIngredients) ? null : _save,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _kGreen,
                       foregroundColor: _kBg,
@@ -204,20 +267,29 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${macros['cal']!.toInt()} kcal', style: const TextStyle(color: _kGreen, fontSize: 16, fontWeight: FontWeight.bold)),
-                          Text('${macros['total_g']!.toInt()}g total', style: const TextStyle(color: _kDim, fontSize: 10)),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${macros['total_cal']!.toInt()} kcal', style: const TextStyle(color: _kGreen, fontSize: 16, fontWeight: FontWeight.bold)),
+                              Text('total · ${macros['total_g']!.toInt()}g', style: const TextStyle(color: _kDim, fontSize: 10)),
+                            ],
+                          ),
+                          _MacroStat('Protein', macros['total_pro']!, const Color(0xFF5B8DEF)),
+                          _MacroStat('Karbo', macros['total_carb']!, const Color(0xFFE0A840)),
+                          _MacroStat('Lemak', macros['total_fat']!, const Color(0xFFE05B5B)),
                         ],
                       ),
-                      _MacroStat('Protein', macros['pro']!, const Color(0xFF5B8DEF)),
-                      _MacroStat('Karbo', macros['carb']!, const Color(0xFFE0A840)),
-                      _MacroStat('Lemak', macros['fat']!, const Color(0xFFE05B5B)),
-                      const Text('/100g', style: TextStyle(color: _kDim, fontSize: 10)),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${macros['cal']!.toInt()} kcal / 100g  ·  P ${macros['pro']!.toStringAsFixed(1)}g  C ${macros['carb']!.toStringAsFixed(1)}g  F ${macros['fat']!.toStringAsFixed(1)}g',
+                        style: const TextStyle(color: _kDim, fontSize: 10),
+                      ),
                     ],
                   ),
                 ),
@@ -279,6 +351,13 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
                 controller: scrollCtrl,
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
                 children: [
+                  // Loading ingredients in edit mode
+                  if (_isLoadingIngredients)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(child: CircularProgressIndicator(color: _kGreen, strokeWidth: 2)),
+                    ),
+
                   // Added ingredients
                   if (_ingredients.isNotEmpty) ...[
                     const Padding(
@@ -302,7 +381,7 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
                       )
                     else
                       ...results.map((f) => _IngredientResultTile(food: f, onAdd: () => _addIngredient(f))),
-                  ] else if (_ingredients.isEmpty)
+                  ] else if (_ingredients.isEmpty && !_isLoadingIngredients)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
                       child: Center(
@@ -338,6 +417,7 @@ class _IngredientTile extends StatefulWidget {
 
 class _IngredientTileState extends State<_IngredientTile> {
   late final TextEditingController _ctrl;
+  String _unit = 'g';
 
   @override
   void initState() {
@@ -349,6 +429,13 @@ class _IngredientTileState extends State<_IngredientTile> {
   void dispose() {
     _ctrl.dispose();
     super.dispose();
+  }
+
+  void _notifyQty(String v) {
+    final parsed = double.tryParse(v);
+    if (parsed != null && parsed > 0) {
+      widget.onQtyChanged(parsed * (_unitToG[_unit] ?? 1.0));
+    }
   }
 
   @override
@@ -365,47 +452,71 @@ class _IngredientTileState extends State<_IngredientTile> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _kLine),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.egg_alt_outlined, color: _kDim, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                Text('${(cal * qty / 100).round()} kcal', style: const TextStyle(color: _kDim, fontSize: 11)),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 64,
-            child: TextField(
-              controller: _ctrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              textAlign: TextAlign.center,
-              decoration: InputDecoration(
-                isDense: true,
-                suffixText: 'g',
-                suffixStyle: const TextStyle(color: _kDim, fontSize: 10),
-                filled: true,
-                fillColor: _kBg,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kLine)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kLine)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kGreen)),
+          Row(
+            children: [
+              const Icon(Icons.egg_alt_outlined, color: _kDim, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('${(cal * qty / 100).round()} kcal', style: const TextStyle(color: _kDim, fontSize: 11)),
+                  ],
+                ),
               ),
-              onChanged: (v) {
-                final parsed = double.tryParse(v);
-                if (parsed != null && parsed > 0) widget.onQtyChanged(parsed);
-              },
-            ),
+              SizedBox(
+                width: 64,
+                child: TextField(
+                  controller: _ctrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    suffixText: _unit,
+                    suffixStyle: const TextStyle(color: _kDim, fontSize: 10),
+                    filled: true,
+                    fillColor: _kBg,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kLine)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kLine)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: _kGreen)),
+                  ),
+                  onChanged: _notifyQty,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: widget.onRemove,
+                child: const Icon(Icons.remove_circle_outline, color: Color(0xFFE05B5B), size: 20),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: widget.onRemove,
-            child: const Icon(Icons.remove_circle_outline, color: Color(0xFFE05B5B), size: 20),
+          const SizedBox(height: 8),
+          Row(
+            children: _unitToG.keys.map((u) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () => setState(() {
+                  _unit = u;
+                  _ctrl.text = u == 'g' ? '100' : '1';
+                  _notifyQty(_ctrl.text);
+                }),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _unit == u ? _kGreen : _kBg,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: _unit == u ? _kGreen : _kLine),
+                  ),
+                  child: Text(u, style: TextStyle(color: _unit == u ? _kBg : Colors.white60, fontSize: 10, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            )).toList(),
           ),
         ],
       ),

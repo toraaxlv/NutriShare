@@ -235,6 +235,10 @@ class NutritionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<List<dynamic>> getRecipeIngredients(String foodId) async {
+    return _svc.getRecipeIngredients(foodId);
+  }
+
   Future<Map<String, dynamic>?> createFood({
     required String name,
     required double caloriesPer100g,
@@ -242,6 +246,7 @@ class NutritionProvider extends ChangeNotifier {
     required double carbsPer100g,
     required double fatPer100g,
     double fiberPer100g = 0,
+    List<Map<String, dynamic>> ingredients = const [],
   }) async {
     final result = await _svc.createFood(
       name: name,
@@ -250,6 +255,35 @@ class NutritionProvider extends ChangeNotifier {
       carbsPer100g: carbsPer100g,
       fatPer100g: fatPer100g,
       fiberPer100g: fiberPer100g,
+      ingredients: ingredients,
+    );
+    if (result != null) {
+      customFoods = await _svc.getCustomFoods();
+      _searchCache.clear();
+      notifyListeners();
+    }
+    return result;
+  }
+
+  Future<Map<String, dynamic>?> updateFood({
+    required String foodId,
+    required String name,
+    required double caloriesPer100g,
+    required double proteinPer100g,
+    required double carbsPer100g,
+    required double fatPer100g,
+    double fiberPer100g = 0,
+    List<Map<String, dynamic>> ingredients = const [],
+  }) async {
+    final result = await _svc.updateFood(
+      foodId: foodId,
+      name: name,
+      caloriesPer100g: caloriesPer100g,
+      proteinPer100g: proteinPer100g,
+      carbsPer100g: carbsPer100g,
+      fatPer100g: fatPer100g,
+      fiberPer100g: fiberPer100g,
+      ingredients: ingredients,
     );
     if (result != null) {
       customFoods = await _svc.getCustomFoods();

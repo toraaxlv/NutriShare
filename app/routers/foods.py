@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+import uuid
 from app.database import get_db
 from app.models.food_item import FoodItem
+from app.models.recipe_ingredient import RecipeIngredient
 from app.services.auth_service import get_current_user
 from app.ml_client.usda_client import search_usda
 
@@ -18,18 +20,55 @@ class FoodItemCreate(BaseModel):
     fat_per_100g: float
     fiber_per_100g: Optional[float] = 0.0
 
+class IngredientIn(BaseModel):
+    name: str
+    calories_per_100g: float
+    protein_per_100g: float
+    carbs_per_100g: float
+    fat_per_100g: float
+    fiber_per_100g: float = 0
+    source: str = "usda"
+    quantity_g: float
+
+class RecipeCreate(FoodItemCreate):
+    ingredients: List[IngredientIn] = []
+
 @router.get("/custom")
 def list_custom_foods(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
     """Kembalikan custom foods milik user yang sedang login saja."""
-    return (
+    foods = (
         db.query(FoodItem)
         .filter(FoodItem.source == "custom", FoodItem.created_by == current_user.id)
         .order_by(FoodItem.name)
         .all()
     )
+    if not foods:
+        return []
+    food_ids = {food.id for food in foods}
+    recipe_ids = {
+        row[0]
+        for row in db.query(RecipeIngredient.recipe_id)
+        .filter(RecipeIngredient.recipe_id.in_(food_ids))
+        .distinct()
+        .all()
+    }
+    return [
+        {
+            "id": str(food.id),
+            "name": food.name,
+            "calories_per_100g": food.calories_per_100g,
+            "protein_per_100g": food.protein_per_100g,
+            "carbs_per_100g": food.carbs_per_100g,
+            "fat_per_100g": food.fat_per_100g,
+            "fiber_per_100g": food.fiber_per_100g or 0,
+            "source": food.source,
+            "has_ingredients": food.id in recipe_ids,
+        }
+        for food in foods
+    ]
 
 
 @router.get("/search")
@@ -83,7 +122,7 @@ async def search_foods(
 
 @router.post("/", status_code=201)
 def create_food(
-    payload: FoodItemCreate,
+    payload: RecipeCreate,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
@@ -98,6 +137,73 @@ def create_food(
         created_by=current_user.id,
     )
     db.add(food)
+    db.flush()
+    for ing in payload.ingredients:
+        db.add(RecipeIngredient(
+            recipe_id=food.id,
+            name=ing.name,
+            calories_per_100g=ing.calories_per_100g,
+            protein_per_100g=ing.protein_per_100g,
+            carbs_per_100g=ing.carbs_per_100g,
+            fat_per_100g=ing.fat_per_100g,
+            fiber_per_100g=ing.fiber_per_100g,
+            source=ing.source,
+            quantity_g=ing.quantity_g,
+        ))
+    db.commit()
+    db.refresh(food)
+    return food
+
+
+@router.get("/{food_id}/ingredients")
+def get_recipe_ingredients(
+    food_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    food = db.query(FoodItem).filter(
+        FoodItem.id == food_id,
+        FoodItem.created_by == current_user.id,
+    ).first()
+    if not food:
+        raise HTTPException(status_code=404, detail="Food tidak ditemukan")
+    ingredients = db.query(RecipeIngredient).filter(RecipeIngredient.recipe_id == food_id).all()
+    return ingredients
+
+
+@router.patch("/{food_id}", status_code=200)
+def update_food(
+    food_id: uuid.UUID,
+    payload: RecipeCreate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    food = db.query(FoodItem).filter(
+        FoodItem.id == food_id,
+        FoodItem.created_by == current_user.id,
+    ).first()
+    if not food:
+        raise HTTPException(status_code=404, detail="Food tidak ditemukan")
+    food.name               = payload.name
+    food.calories_per_100g  = payload.calories_per_100g
+    food.protein_per_100g   = payload.protein_per_100g
+    food.carbs_per_100g     = payload.carbs_per_100g
+    food.fat_per_100g       = payload.fat_per_100g
+    food.fiber_per_100g     = payload.fiber_per_100g
+    if payload.ingredients:
+        db.query(RecipeIngredient).filter(RecipeIngredient.recipe_id == food_id).delete()
+        for ing in payload.ingredients:
+            db.add(RecipeIngredient(
+                recipe_id=food_id,
+                name=ing.name,
+                calories_per_100g=ing.calories_per_100g,
+                protein_per_100g=ing.protein_per_100g,
+                carbs_per_100g=ing.carbs_per_100g,
+                fat_per_100g=ing.fat_per_100g,
+                fiber_per_100g=ing.fiber_per_100g,
+                source=ing.source,
+                quantity_g=ing.quantity_g,
+            ))
     db.commit()
     db.refresh(food)
     return food

@@ -9,15 +9,15 @@ const _kDim   = Color(0xFF6B9080);
 const _kLine  = Color(0xFF2B4A38);
 
 class CustomFoodSheet extends StatefulWidget {
-  const CustomFoodSheet({super.key});
+  final Map<String, dynamic>? existingFood;
+  const CustomFoodSheet({super.key, this.existingFood});
 
-  /// Returns the created food map, or null if cancelled.
-  static Future<Map<String, dynamic>?> show(BuildContext context) {
+  static Future<Map<String, dynamic>?> show(BuildContext context, {Map<String, dynamic>? existingFood}) {
     return showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const CustomFoodSheet(),
+      builder: (_) => CustomFoodSheet(existingFood: existingFood),
     );
   }
 
@@ -27,18 +27,29 @@ class CustomFoodSheet extends StatefulWidget {
 
 class _CustomFoodSheetState extends State<CustomFoodSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController();
-  final _calCtrl  = TextEditingController();
-  final _proCtrl  = TextEditingController();
-  final _carbCtrl = TextEditingController();
-  final _fatCtrl  = TextEditingController();
-  bool _isSaving  = false;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _calCtrl;
+  late final TextEditingController _proCtrl;
+  late final TextEditingController _carbCtrl;
+  late final TextEditingController _fatCtrl;
+  bool _isSaving = false;
+
+  bool get _isEdit => widget.existingFood != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final f = widget.existingFood;
+    _nameCtrl = TextEditingController(text: f?['name']?.toString() ?? '');
+    _calCtrl  = TextEditingController(text: f != null ? (f['calories_per_100g'] as num?)?.toStringAsFixed(1) ?? '' : '');
+    _proCtrl  = TextEditingController(text: f != null ? (f['protein_per_100g']  as num?)?.toStringAsFixed(1) ?? '' : '');
+    _carbCtrl = TextEditingController(text: f != null ? (f['carbs_per_100g']    as num?)?.toStringAsFixed(1) ?? '' : '');
+    _fatCtrl  = TextEditingController(text: f != null ? (f['fat_per_100g']      as num?)?.toStringAsFixed(1) ?? '' : '');
+  }
 
   @override
   void dispose() {
-    for (final c in [_nameCtrl, _calCtrl, _proCtrl, _carbCtrl, _fatCtrl]) {
-      c.dispose();
-    }
+    for (final c in [_nameCtrl, _calCtrl, _proCtrl, _carbCtrl, _fatCtrl]) c.dispose();
     super.dispose();
   }
 
@@ -46,16 +57,28 @@ class _CustomFoodSheetState extends State<CustomFoodSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
-    final food = await context.read<NutritionProvider>().createFood(
-      name: _nameCtrl.text.trim(),
-      caloriesPer100g: double.parse(_calCtrl.text),
-      proteinPer100g: double.parse(_proCtrl.text),
-      carbsPer100g: double.parse(_carbCtrl.text),
-      fatPer100g: double.parse(_fatCtrl.text),
-    );
+    Map<String, dynamic>? result;
+    if (_isEdit) {
+      result = await context.read<NutritionProvider>().updateFood(
+        foodId: widget.existingFood!['id'].toString(),
+        name: _nameCtrl.text.trim(),
+        caloriesPer100g: double.parse(_calCtrl.text),
+        proteinPer100g: double.parse(_proCtrl.text),
+        carbsPer100g: double.parse(_carbCtrl.text),
+        fatPer100g: double.parse(_fatCtrl.text),
+      );
+    } else {
+      result = await context.read<NutritionProvider>().createFood(
+        name: _nameCtrl.text.trim(),
+        caloriesPer100g: double.parse(_calCtrl.text),
+        proteinPer100g: double.parse(_proCtrl.text),
+        carbsPer100g: double.parse(_carbCtrl.text),
+        fatPer100g: double.parse(_fatCtrl.text),
+      );
+    }
 
     setState(() => _isSaving = false);
-    if (mounted) Navigator.pop(context, food);
+    if (mounted) Navigator.pop(context, result);
   }
 
   @override
@@ -75,7 +98,7 @@ class _CustomFoodSheetState extends State<CustomFoodSheet> {
           children: [
             Container(width: 40, height: 4, decoration: BoxDecoration(color: _kLine, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
-            const Text('Custom Food', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(_isEdit ? 'Edit Food' : 'Custom Food', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             const Text('Per 100g', style: TextStyle(color: _kDim, fontSize: 12)),
             const SizedBox(height: 16),
@@ -105,7 +128,7 @@ class _CustomFoodSheetState extends State<CustomFoodSheet> {
                 ),
                 child: _isSaving
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold)),
+                    : Text(_isEdit ? 'Simpan Perubahan' : 'Simpan', style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],

@@ -43,10 +43,13 @@ class AddFoodSheet extends StatefulWidget {
   State<AddFoodSheet> createState() => _AddFoodSheetState();
 }
 
+const _unitToG = {'g': 1.0, 'tbsp': 15.0, 'tsp': 5.0, 'cup': 240.0};
+
 class _AddFoodSheetState extends State<AddFoodSheet> {
   final _searchCtrl = TextEditingController();
   dynamic _selectedFood;
   final _qtyCtrl = TextEditingController(text: '100');
+  String _unit = 'g';
   bool _isLogging = false;
   Timer? _searchDebounce;
 
@@ -77,12 +80,13 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   Future<void> _log() async {
     final qty = double.tryParse(_qtyCtrl.text);
     if (qty == null || qty <= 0) return;
+    final quantityG = qty * (_unitToG[_unit] ?? 1.0);
 
     setState(() => _isLogging = true);
     final ok = await context.read<NutritionProvider>().addFoodLog(
       food: Map<String, dynamic>.from(_selectedFood),
       mealType: widget.mealType,
-      quantityG: qty,
+      quantityG: quantityG,
       date: widget.date,
     );
     setState(() => _isLogging = false);
@@ -239,8 +243,6 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      const Text('Jumlah (g):', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                      const SizedBox(width: 12),
                       SizedBox(
                         width: 80,
                         child: TextField(
@@ -263,6 +265,40 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _unitToG.keys.map((u) => Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: GestureDetector(
+                                onTap: () => setState(() {
+                                  _unit = u;
+                                  if (u == 'g') _qtyCtrl.text = '100';
+                                  else _qtyCtrl.text = '1';
+                                }),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: _unit == u ? _kGreen : _kBg,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: _unit == u ? _kGreen : _kLine),
+                                  ),
+                                  child: Text(
+                                    u,
+                                    style: TextStyle(
+                                      color: _unit == u ? _kBg : Colors.white70,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )).toList(),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -271,10 +307,11 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
                     valueListenable: _qtyCtrl,
                     builder: (_, value, __) {
                       final qty = double.tryParse(value.text.replaceAll(',', '.')) ?? 0;
-                      final cal  = ((_selectedFood['calories_per_100g'] as num?)?.toDouble() ?? 0) * qty / 100;
-                      final pro  = ((_selectedFood['protein_per_100g']  as num?)?.toDouble() ?? 0) * qty / 100;
-                      final carb = ((_selectedFood['carbs_per_100g']    as num?)?.toDouble() ?? 0) * qty / 100;
-                      final fat  = ((_selectedFood['fat_per_100g']      as num?)?.toDouble() ?? 0) * qty / 100;
+                      final qtyG = qty * (_unitToG[_unit] ?? 1.0);
+                      final cal  = ((_selectedFood['calories_per_100g'] as num?)?.toDouble() ?? 0) * qtyG / 100;
+                      final pro  = ((_selectedFood['protein_per_100g']  as num?)?.toDouble() ?? 0) * qtyG / 100;
+                      final carb = ((_selectedFood['carbs_per_100g']    as num?)?.toDouble() ?? 0) * qtyG / 100;
+                      final fat  = ((_selectedFood['fat_per_100g']      as num?)?.toDouble() ?? 0) * qtyG / 100;
                       return Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

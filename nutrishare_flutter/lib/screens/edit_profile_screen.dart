@@ -4,11 +4,33 @@ import '../providers/auth_provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../models/user.dart';
 
-const _kBg    = Color(0xFF1A3528);
-const _kCard  = Color(0xFF243D2F);
-const _kGreen = Color(0xFFA8E040);
-const _kDim   = Color(0xFF6B9080);
-const _kLine  = Color(0xFF2B4A38);
+const _kBg     = Color(0xFF1A3528);
+const _kCard   = Color(0xFF243D2F);
+const _kGreen  = Color(0xFFA8E040);
+const _kDim    = Color(0xFF6B9080);
+const _kLine   = Color(0xFF2B4A38);
+const _kOrange = Color(0xFFF09038);
+
+const _kActivityMultipliers = {
+  'no_activity': 1.0,
+  'sedentary':   1.2,
+  'light':       1.375,
+  'moderate':    1.55,
+  'very_active': 1.9,
+};
+
+double _calcTDEEFromUser(User user) {
+  if (user.weightKg == null || user.heightCm == null || user.dateOfBirth == null || user.gender == null) return 0;
+  final dob = DateTime.tryParse(user.dateOfBirth!);
+  if (dob == null) return 0;
+  final today = DateTime.now();
+  int age = today.year - dob.year;
+  if (today.month < dob.month || (today.month == dob.month && today.day < dob.day)) age--;
+  double bmr = 10 * user.weightKg! + 6.25 * user.heightCm! - 5 * age;
+  bmr += user.gender == 'male' ? 5 : -161;
+  final multiplier = _kActivityMultipliers[user.activityLevel] ?? 1.2;
+  return bmr * multiplier;
+}
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -181,6 +203,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 items: _activities,
                 onChanged: (v) => setState(() => _activityLevel = v),
               ),
+              if (_activityLevel != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  const {
+                    'no_activity': 'Istirahat total / pemulihan — < 2.000 langkah/hari. Hanya kalori basal yang dihitung.',
+                    'sedentary':   'Kerja kantoran, jarang bergerak — < 5.000 langkah/hari. +20% dari kalori basal.',
+                    'light':       'Olahraga ringan 1–3x/minggu — 5.000–7.500 langkah/hari. +37% dari kalori basal.',
+                    'moderate':    'Olahraga rutin 3–5x/minggu — 7.500–10.000 langkah/hari. +55% dari kalori basal.',
+                    'very_active': 'Latihan berat setiap hari atau kerja fisik — > 12.500 langkah/hari. +90% dari kalori basal.',
+                  }[_activityLevel] ?? '',
+                  style: const TextStyle(color: _kDim, fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -268,6 +303,16 @@ class _EditTargetScreenState extends State<EditTargetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user  = context.read<AuthProvider>().user;
+    final tdee  = user != null ? _calcTDEEFromUser(user) : 0.0;
+    final maxAchievableRate = tdee > 0 && _goal == 'lose'
+        ? ((tdee - 1200) * 7 / 7700).clamp(0.0, double.infinity)
+        : null;
+    final isConstrained = maxAchievableRate != null && _ratePerWeek > maxAchievableRate;
+    final actualRate = isConstrained
+        ? (maxAchievableRate * 10).round() / 10
+        : null;
+
     final rates = _goal == 'gain'
         ? [0.25, 0.5]
         : _goal == 'lose'
@@ -312,6 +357,32 @@ class _EditTargetScreenState extends State<EditTargetScreen> {
                     onSelected: (_) => setState(() => _ratePerWeek = r),
                   )).toList(),
                 ),
+                if (isConstrained) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: _kOrange.withValues(alpha: 0.12),
+                      border: Border.all(color: _kOrange.withValues(alpha: 0.5)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: _kOrange, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Rate ini melebihi batas aman (min. 1.200 kcal/hari).\n'
+                            'Dengan activity level kamu, rate sebenarnya yang bisa dicapai: ~$actualRate kg/minggu.\n\n'
+                            'Untuk mencapai rate yang lebih tinggi, coba naikkan activity level kamu di halaman Edit Profile.',
+                            style: const TextStyle(color: _kOrange, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
               const SizedBox(height: 32),
               SizedBox(

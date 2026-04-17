@@ -61,7 +61,7 @@ def log_food(
     ratio = payload.quantity_g / 100
     log = FoodLog(
         user_id=current_user.id,
-        food_item_id=payload.food_item_id,
+        food_item_id=food.id,
         log_date=payload.log_date,
         meal_type=payload.meal_type,
         quantity_g=payload.quantity_g,
