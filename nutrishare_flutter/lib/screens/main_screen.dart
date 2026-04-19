@@ -4,6 +4,7 @@ import 'diary_screen.dart';
 import 'foods_screen.dart';
 import 'more_screen.dart';
 import 'quick_add_sheet.dart';
+import '../widgets/pressable.dart';
 
 const _kBg      = Color(0xFF1A3528);
 const _kNavBg   = Color(0xFF163022);
@@ -76,19 +77,22 @@ class _MainScreenState extends State<MainScreen> {
     final color = selected ? _kGreen : _kUnsel;
 
     return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _onTap(index),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w500),
-            ),
-          ],
+      child: Pressable(
+        scale: 0.93,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _onTap(index),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -96,17 +100,20 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _centerButton() {
     return Expanded(
-      child: GestureDetector(
-        onTap: () => _onTap(2),
-        child: Center(
-          child: Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: _kOrange,
-              shape: BoxShape.circle,
+      child: Pressable(
+        scale: 0.92,
+        child: GestureDetector(
+          onTap: () => _onTap(2),
+          child: Center(
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: const BoxDecoration(
+                color: _kOrange,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
             ),
-            child: const Icon(Icons.add, color: Colors.white, size: 28),
           ),
         ),
       ),

@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../widgets/nutrishare_logo.dart';
 import '../widgets/macro_nutrient_card.dart';
+import '../widgets/pressable.dart';
 import 'edit_profile_screen.dart';
 
 const _kBg     = Color(0xFF1A3528);
@@ -697,20 +698,22 @@ class _OverviewCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _logWeight(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kGreen,
-                foregroundColor: _kBg,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                elevation: 0,
-              ),
-              child: const Text(
-                'LOG WEIGHT',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1),
+          Pressable(
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _logWeight(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kGreen,
+                  foregroundColor: _kBg,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'LOG WEIGHT',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1),
+                ),
               ),
             ),
           ),

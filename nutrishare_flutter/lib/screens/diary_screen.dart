@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/nutrition_provider.dart';
 import '../widgets/add_food_sheet.dart';
 import '../widgets/macro_nutrient_card.dart';
+import '../widgets/pressable.dart';
 
 const _kBg     = Color(0xFF1A3528);
 const _kCard   = Color(0xFF243D2F);
@@ -383,7 +384,7 @@ class _CalorieRings extends StatelessWidget {
   }
 }
 
-class _Ring extends StatelessWidget {
+class _Ring extends StatefulWidget {
   final double progress;
   final Color color;
   final int value;
@@ -392,8 +393,36 @@ class _Ring extends StatelessWidget {
   const _Ring({required this.progress, required this.color, required this.value, required this.label});
 
   @override
+  State<_Ring> createState() => _RingState();
+}
+
+class _RingState extends State<_Ring> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _ctrl.forward();
+  }
+
+  @override
+  void didUpdateWidget(_Ring old) {
+    super.didUpdateWidget(old);
+    if (old.progress != widget.progress) _ctrl.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final display = value.toString().replaceAllMapped(
+    final display = widget.value.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (m) => '${m[1]}.',
     );
@@ -405,11 +434,20 @@ class _Ring extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              CustomPaint(size: const Size(110, 110), painter: _RingPainter(progress: progress, color: color)),
+              AnimatedBuilder(
+                animation: _anim,
+                builder: (_, __) => CustomPaint(
+                  size: const Size(110, 110),
+                  painter: _RingPainter(
+                    progress: widget.progress * _anim.value,
+                    color: widget.color,
+                  ),
+                ),
+              ),
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(display, style: TextStyle(color: color, fontSize: 17, fontWeight: FontWeight.bold)),
+                  Text(display, style: TextStyle(color: widget.color, fontSize: 17, fontWeight: FontWeight.bold)),
                   const Text('calories', style: TextStyle(color: Colors.white54, fontSize: 10)),
                 ],
               ),
@@ -417,7 +455,7 @@ class _Ring extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(widget.label, style: TextStyle(color: widget.color, fontSize: 12, fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -831,19 +869,21 @@ class _LogDetailSheetState extends State<_LogDetailSheet> {
             ),
             const SizedBox(height: 20),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _saving ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kGreen,
-                  foregroundColor: _kBg,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            Pressable(
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kGreen,
+                    foregroundColor: _kBg,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                  child: _saving
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
-                child: _saving
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
           ],

@@ -140,13 +140,18 @@ class _MacroRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 5),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 4,
-              backgroundColor: _kLine,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: progress),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOut,
+            builder: (_, value, __) => ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: value,
+                minHeight: 4,
+                backgroundColor: _kLine,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
             ),
           ),
         ],
@@ -309,13 +314,18 @@ class _MacroBreakdownSheet extends StatelessWidget {
             const SizedBox(height: 16),
 
             // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: target > 0 ? (actual / target).clamp(0.0, 1.0) : 0.0,
-                minHeight: 8,
-                backgroundColor: _kLine,
-                valueColor: AlwaysStoppedAnimation<Color>(color),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: target > 0 ? (actual / target).clamp(0.0, 1.0) : 0.0),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOut,
+              builder: (_, value, __) => ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: value,
+                  minHeight: 8,
+                  backgroundColor: _kLine,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
               ),
             ),
             const SizedBox(height: 6),
