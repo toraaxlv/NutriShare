@@ -25,7 +25,6 @@ Aplikasi mobile tracking nutrisi harian dengan backend FastAPI dan Flutter. Dike
 - Insight harian berbasis pola makan (rule-based)
 - Goal forecast — estimasi tanggal target berat tercapai
 - Streak logging harian
-- Energy history — bar chart kalori harian per makro (protein, karbs, lemak)
 
 ---
 
@@ -171,7 +170,7 @@ NutriShare/
 │   └── pubspec.yaml
 ├── seed_foods.py
 ├── requirements.txt
-└── .env                         # tidak di-commit
+└── .env                         # jangan di-commit
 ```
 
 ---
