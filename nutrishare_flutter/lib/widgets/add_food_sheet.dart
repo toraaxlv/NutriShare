@@ -79,26 +79,33 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
   Future<void> _log() async {
     final qty = double.tryParse(_qtyCtrl.text);
-    if (qty == null || qty <= 0) return;
+    if (qty == null || qty <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Jumlah harus lebih dari 0'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
     final quantityG = qty * (_unitToG[_unit] ?? 1.0);
 
     setState(() => _isLogging = true);
-    final ok = await context.read<NutritionProvider>().addFoodLog(
-      food: Map<String, dynamic>.from(_selectedFood),
-      mealType: widget.mealType,
-      quantityG: quantityG,
-      date: widget.date,
-    );
-    setState(() => _isLogging = false);
-
-    if (!mounted) return;
-    if (ok) {
+    try {
+      await context.read<NutritionProvider>().addFoodLog(
+        food: Map<String, dynamic>.from(_selectedFood),
+        mealType: widget.mealType,
+        quantityG: quantityG,
+        date: widget.date,
+      );
+      if (!mounted) return;
       widget.onLogged?.call();
       Navigator.pop(context);
-    } else {
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal menambahkan makanan. Coba lagi.'), backgroundColor: Colors.red),
+        SnackBar(content: Text(msg), backgroundColor: Colors.red),
       );
+    } finally {
+      if (mounted) setState(() => _isLogging = false);
     }
   }
 

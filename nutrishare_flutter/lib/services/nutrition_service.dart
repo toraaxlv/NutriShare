@@ -25,6 +25,20 @@ class NutritionService {
     return false;
   }
 
+  /// Throw Exception dengan pesan dari backend jika response bukan 2xx.
+  Future<void> _throwIfError(http.Response res) async {
+    if (res.statusCode >= 200 && res.statusCode < 300) return;
+    await _checkUnauthorized(res);
+    try {
+      final body = jsonDecode(res.body);
+      final msg = body['detail'];
+      if (msg is String && msg.isNotEmpty) throw Exception(msg);
+    } catch (e) {
+      if (e is Exception) rethrow;
+    }
+    throw Exception('Terjadi kesalahan. Coba lagi.');
+  }
+
   // ── Profile ──────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>?> getTargets() async {
@@ -84,9 +98,8 @@ class NutritionService {
       headers: await _headers(),
       body: jsonEncode(body),
     );
-    if (res.statusCode == 201) return jsonDecode(res.body);
-    await _checkUnauthorized(res);
-    return null;
+    await _throwIfError(res);
+    return jsonDecode(res.body);
   }
 
   Future<Map<String, dynamic>?> updateLog({
@@ -98,9 +111,8 @@ class NutritionService {
       headers: await _headers(),
       body: jsonEncode({'quantity_g': quantityG}),
     );
-    if (res.statusCode == 200) return jsonDecode(res.body);
-    await _checkUnauthorized(res);
-    return null;
+    await _throwIfError(res);
+    return jsonDecode(res.body);
   }
 
   Future<bool> deleteLog(String logId) async {
@@ -170,9 +182,8 @@ class NutritionService {
         'ingredients': ingredients,
       }),
     );
-    if (res.statusCode == 201) return jsonDecode(res.body);
-    await _checkUnauthorized(res);
-    return null;
+    await _throwIfError(res);
+    return jsonDecode(res.body);
   }
 
   Future<Map<String, dynamic>?> updateFood({
@@ -198,9 +209,8 @@ class NutritionService {
         'ingredients': ingredients,
       }),
     );
-    if (res.statusCode == 200) return jsonDecode(res.body);
-    await _checkUnauthorized(res);
-    return null;
+    await _throwIfError(res);
+    return jsonDecode(res.body);
   }
 
   Future<List<dynamic>> getRecipeIngredients(String foodId) async {

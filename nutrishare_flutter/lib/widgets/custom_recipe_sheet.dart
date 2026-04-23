@@ -155,30 +155,38 @@ class _CustomRecipeSheetState extends State<CustomRecipeSheet> {
     final macros = _calculatedMacros;
     final provider = context.read<NutritionProvider>();
 
-    Map<String, dynamic>? food;
-    if (_isEdit) {
-      food = await provider.updateFood(
-        foodId:          widget.existingFood!['id'].toString(),
-        name:            name,
-        caloriesPer100g: macros['cal']!,
-        proteinPer100g:  macros['pro']!,
-        carbsPer100g:    macros['carb']!,
-        fatPer100g:      macros['fat']!,
-        ingredients:     _ingredientsPayload,
+    try {
+      Map<String, dynamic>? food;
+      if (_isEdit) {
+        food = await provider.updateFood(
+          foodId:          widget.existingFood!['id'].toString(),
+          name:            name,
+          caloriesPer100g: macros['cal']!,
+          proteinPer100g:  macros['pro']!,
+          carbsPer100g:    macros['carb']!,
+          fatPer100g:      macros['fat']!,
+          ingredients:     _ingredientsPayload,
+        );
+      } else {
+        food = await provider.createFood(
+          name:            name,
+          caloriesPer100g: macros['cal']!,
+          proteinPer100g:  macros['pro']!,
+          carbsPer100g:    macros['carb']!,
+          fatPer100g:      macros['fat']!,
+          ingredients:     _ingredientsPayload,
+        );
+      }
+      if (mounted) Navigator.pop(context, food);
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.red),
       );
-    } else {
-      food = await provider.createFood(
-        name:            name,
-        caloriesPer100g: macros['cal']!,
-        proteinPer100g:  macros['pro']!,
-        carbsPer100g:    macros['carb']!,
-        fatPer100g:      macros['fat']!,
-        ingredients:     _ingredientsPayload,
-      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
-    setState(() => _isSaving = false);
-
-    if (mounted) Navigator.pop(context, food);
   }
 
   @override

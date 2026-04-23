@@ -72,24 +72,29 @@ class _CustomMealSheetState extends State<CustomMealSheet> {
     setState(() => _isLogging = true);
 
     final provider = context.read<NutritionProvider>();
+    String? errorMsg;
     int ok = 0;
     for (final f in _selected) {
-      final success = await provider.addFoodLog(
-        food: Map<String, dynamic>.from(f),
-        mealType: _mealType,
-        quantityG: (f['quantity_g'] as num).toDouble(),
-        date: DateTime.now(),
-      );
-      if (success) ok++;
+      try {
+        await provider.addFoodLog(
+          food: Map<String, dynamic>.from(f),
+          mealType: _mealType,
+          quantityG: (f['quantity_g'] as num).toDouble(),
+          date: DateTime.now(),
+        );
+        ok++;
+      } catch (e) {
+        errorMsg ??= e.toString().replaceFirst('Exception: ', '');
+      }
     }
 
-    setState(() => _isLogging = false);
+    if (mounted) setState(() => _isLogging = false);
     if (mounted) {
       if (ok > 0) {
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal log makanan. Coba lagi.'), backgroundColor: Colors.red),
+          SnackBar(content: Text(errorMsg ?? 'Gagal log makanan. Coba lagi.'), backgroundColor: Colors.red),
         );
       }
     }
