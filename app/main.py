@@ -13,8 +13,6 @@ app = FastAPI(
     title="Nutrishare API",
     description="Backend API Nutrisharee",
     version="1.0.0",
-    docs_url=None,
-    redoc_url=None,
 )
 
 @app.exception_handler(RequestValidationError)
