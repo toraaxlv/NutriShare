@@ -15,6 +15,7 @@ class AddFoodSheet extends StatefulWidget {
   final DateTime date;
   final VoidCallback? onLogged;
   final dynamic preselectedFood;
+  final BuildContext? parentContext;
 
   const AddFoodSheet({
     super.key,
@@ -22,6 +23,7 @@ class AddFoodSheet extends StatefulWidget {
     required this.date,
     this.onLogged,
     this.preselectedFood,
+    this.parentContext,
   });
 
   static void show(
@@ -35,7 +37,13 @@ class AddFoodSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AddFoodSheet(mealType: mealType, date: date, onLogged: onLogged, preselectedFood: preselectedFood),
+      builder: (_) => AddFoodSheet(
+        mealType: mealType,
+        date: date,
+        onLogged: onLogged,
+        preselectedFood: preselectedFood,
+        parentContext: context,
+      ),
     );
   }
 
@@ -77,12 +85,17 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
   void _clearSelection() => setState(() => _selectedFood = null);
 
+  void _showError(String msg, {bool isWarning = false}) {
+    final ctx = widget.parentContext ?? context;
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: isWarning ? Colors.orange : Colors.red),
+    );
+  }
+
   Future<void> _log() async {
     final qty = double.tryParse(_qtyCtrl.text);
     if (qty == null || qty <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Jumlah harus lebih dari 0'), backgroundColor: Colors.orange),
-      );
+      _showError('Jumlah harus lebih dari 0', isWarning: true);
       return;
     }
     final quantityG = qty * (_unitToG[_unit] ?? 1.0);
@@ -99,11 +112,8 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       widget.onLogged?.call();
       Navigator.pop(context);
     } catch (e) {
-      if (!mounted) return;
       final msg = e.toString().replaceFirst('Exception: ', '');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.red),
-      );
+      _showError(msg);
     } finally {
       if (mounted) setState(() => _isLogging = false);
     }
