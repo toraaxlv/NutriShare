@@ -59,6 +59,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   final _qtyCtrl = TextEditingController(text: '100');
   String _unit = 'g';
   bool _isLogging = false;
+  String? _errorMsg;
   Timer? _searchDebounce;
 
   @override
@@ -85,22 +86,15 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
   void _clearSelection() => setState(() => _selectedFood = null);
 
-  void _showError(String msg, {bool isWarning = false}) {
-    final ctx = widget.parentContext ?? context;
-    ScaffoldMessenger.of(ctx).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: isWarning ? Colors.orange : Colors.red),
-    );
-  }
-
   Future<void> _log() async {
     final qty = double.tryParse(_qtyCtrl.text);
     if (qty == null || qty <= 0) {
-      _showError('Jumlah harus lebih dari 0', isWarning: true);
+      setState(() => _errorMsg = 'Jumlah harus lebih dari 0');
       return;
     }
     final quantityG = qty * (_unitToG[_unit] ?? 1.0);
 
-    setState(() => _isLogging = true);
+    setState(() { _isLogging = true; _errorMsg = null; });
     try {
       await context.read<NutritionProvider>().addFoodLog(
         food: Map<String, dynamic>.from(_selectedFood),
@@ -112,8 +106,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       widget.onLogged?.call();
       Navigator.pop(context);
     } catch (e) {
-      final msg = e.toString().replaceFirst('Exception: ', '');
-      _showError(msg);
+      if (mounted) setState(() => _errorMsg = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLogging = false);
     }
@@ -359,6 +352,17 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
               ),
             ),
             const SizedBox(height: 16),
+            if (_errorMsg != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(_errorMsg!, style: const TextStyle(color: Colors.redAccent, fontSize: 13))),
+                  ],
+                ),
+              ),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
