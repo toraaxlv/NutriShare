@@ -246,6 +246,19 @@ def _build_insight_text(streak, dow_pattern, overall_trend, targets: dict, total
 
 
 # ---------------------------------------------------------------------------
+# Invalidasi cache
+# ---------------------------------------------------------------------------
+
+def invalidate_today_insight(user_id, db: Session) -> None:
+    """Hapus cache insight hari ini agar di-regenerate saat diminta berikutnya."""
+    db.query(UserInsight).filter(
+        UserInsight.user_id == user_id,
+        UserInsight.generated_date == date.today(),
+    ).delete()
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
 # Entry point utama
 # ---------------------------------------------------------------------------
 

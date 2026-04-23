@@ -9,6 +9,7 @@ from app.models.food_item import FoodItem
 from app.schemas.food_log import FoodLogCreate, FoodLogResponse, DailySummary
 from app.services.auth_service import get_current_user
 from app.services.nutrition_service import calculate_targets
+from app.services.insight_service import invalidate_today_insight
 import uuid
 
 
@@ -73,6 +74,7 @@ def log_food(
     db.add(log)
     db.commit()
     db.refresh(log)
+    invalidate_today_insight(current_user.id, db)
 
     # Tambah nama makanan ke response
     log.food_name = food.name
@@ -225,6 +227,7 @@ def update_log(
     log.fat_g      = round(food.fat_per_100g      * ratio, 1)
     db.commit()
     db.refresh(log)
+    invalidate_today_insight(current_user.id, db)
 
     log.food_name = food.name
     return log
@@ -244,3 +247,4 @@ def delete_log(
         raise HTTPException(status_code=404, detail="Log tidak ditemukan")
     db.delete(log)
     db.commit()
+    invalidate_today_insight(current_user.id, db)
