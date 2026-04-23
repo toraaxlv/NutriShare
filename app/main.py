@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from app.routers import auth, profile, foods, logs, insights, weight_logs, water
 from app.database import engine
 from app import models
@@ -14,6 +16,14 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    first_error = exc.errors()[0]
+    msg = first_error.get("msg", "Input tidak valid")
+    # Pydantic v2 prefix "Value error, " — buang supaya pesan lebih bersih
+    msg = msg.removeprefix("Value error, ")
+    return JSONResponse(status_code=422, content={"detail": msg})
 
 app.add_middleware(
     CORSMiddleware,

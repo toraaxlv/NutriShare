@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List
 import uuid
 from app.database import get_db
@@ -20,6 +20,20 @@ class FoodItemCreate(BaseModel):
     fat_per_100g: float
     fiber_per_100g: Optional[float] = 0.0
 
+    @field_validator("calories_per_100g")
+    @classmethod
+    def calories_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Kalori harus lebih dari 0")
+        return v
+
+    @field_validator("protein_per_100g", "carbs_per_100g", "fat_per_100g", "fiber_per_100g")
+    @classmethod
+    def nutrients_non_negative(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("Nilai nutrisi tidak boleh negatif")
+        return v
+
 class IngredientIn(BaseModel):
     name: str
     calories_per_100g: float
@@ -29,6 +43,27 @@ class IngredientIn(BaseModel):
     fiber_per_100g: float = 0
     source: str = "usda"
     quantity_g: float
+
+    @field_validator("quantity_g")
+    @classmethod
+    def quantity_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Jumlah bahan harus lebih dari 0")
+        return v
+
+    @field_validator("calories_per_100g")
+    @classmethod
+    def calories_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Kalori harus lebih dari 0")
+        return v
+
+    @field_validator("protein_per_100g", "carbs_per_100g", "fat_per_100g", "fiber_per_100g")
+    @classmethod
+    def nutrients_non_negative(cls, v):
+        if v < 0:
+            raise ValueError("Nilai nutrisi tidak boleh negatif")
+        return v
 
 class RecipeCreate(FoodItemCreate):
     ingredients: List[IngredientIn] = []
