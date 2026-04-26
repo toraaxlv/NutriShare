@@ -32,7 +32,10 @@ CLAUDE.md
 *.docx
 *.xlsx
 ~$*
-modelsversion1.zip
+docs/diagrams/
+
+# ── Report/testplan generator scripts ─────────────────────────────────────────
+scripts/generate_*.py
 
 # ── Database lokal ────────────────────────────────────────────────────────────
 *.db
