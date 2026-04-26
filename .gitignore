@@ -28,6 +28,12 @@ Thumbs.db
 CLAUDE.md
 .claude/
 
+# ── Generated output files ────────────────────────────────────────────────────
+*.docx
+*.xlsx
+~$*
+modelsversion1.zip
+
 # ── Database lokal ────────────────────────────────────────────────────────────
 *.db
 *.sqlite
