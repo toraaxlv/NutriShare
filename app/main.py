@@ -1,3 +1,5 @@
+import time
+import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -5,6 +7,9 @@ from fastapi.responses import JSONResponse
 from app.routers import auth, profile, foods, logs, insights, weight_logs, water
 from app.database import engine
 from app import models
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+perf_logger = logging.getLogger("perf")
 
 # Buat semua tabel otomatis
 models.Base.metadata.create_all(bind=engine)
@@ -14,6 +19,15 @@ app = FastAPI(
     description="Backend API Nutrisharee",
     version="1.0.0",
 )
+
+@app.middleware("http")
+async def log_response_time(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
+    perf_logger.info(f"[PERF] {request.method} {request.url.path} → {response.status_code} ({elapsed_ms}ms)")
+    return response
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
