@@ -160,6 +160,7 @@ NutriShare/
 │   ├── database.py
 │   └── config.py
 ├── nutrishare_flutter/          # Flutter mobile app
+│   ├── assets/images/
 │   ├── lib/
 │   │   ├── main.dart
 │   │   ├── models/
@@ -167,10 +168,16 @@ NutriShare/
 │   │   ├── screens/
 │   │   ├── services/
 │   │   └── widgets/
-│   └── pubspec.yaml
-├── seed_foods.py
+│   └── test/
+│       └── widget_test.dart     # Flutter unit tests
+├── scripts&machine-learning/    # ML model & seed data
+│   ├── ml_core1.py
+│   ├── seed_foods.py
+│   └── modelsversion1.zip
+├── tests/
+│   └── test_services.py         # Backend unit tests (pytest)
 ├── requirements.txt
-└── .env                         # jangan di-commit
+└── railway.toml
 ```
 
 ---
