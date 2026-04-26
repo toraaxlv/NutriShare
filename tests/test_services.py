@@ -1,7 +1,4 @@
-"""
-White Box Unit Tests — NutriShare Backend Services
-Jalankan: pytest tests/test_services.py -v
-"""
+
 import pytest
 from datetime import date, timedelta
 from types import SimpleNamespace
