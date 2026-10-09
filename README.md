@@ -28,6 +28,16 @@ Aplikasi mobile tracking nutrisi harian dengan backend FastAPI dan Flutter. Dike
 
 ---
 
+## Demo
+
+**Diary harian** — rekap kalori & makronutrien, water tracking, dan log per makanan:
+
+<p align="center">
+  <img src="docs/screenshots/diary.png" width="320" alt="NutriShare — diary harian">
+</p>
+
+---
+
 ## Tech Stack
 
 | Layer | Teknologi |
@@ -170,6 +180,9 @@ NutriShare/
 │   │   └── widgets/
 │   └── test/
 │       └── widget_test.dart     # Flutter unit tests
+├── docs/
+│   ├── diagrams/
+│   └── screenshots/           # Screenshot demo aplikasi
 ├── scripts&machine-learning/    # ML model & seed data
 │   ├── ml_core1.py
 │   ├── seed_foods.py
